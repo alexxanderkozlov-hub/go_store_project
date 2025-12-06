@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить поставщика - СкладPRO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: white;
+            color: #333;
+            line-height: 1.6;
+            padding: 30px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .page-title {
+            font-size: 32px;
+            color: #000000;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+        
+        /* Форма */
+        .form-container {
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .form-group .required {
+            color: #e74c3c;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        /* Кнопки */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-save {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-back {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-back:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
+        }
+        
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #2ecc71;
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transform: translateX(150%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            background: #e74c3c;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Добавить поставщика</h1>
+        
+        <div class="form-container">
+            <form id="supplierForm" action="/suppliers/create" method="POST">
+                <div class="form-group">
+                    <label for="name">Компания: <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" placeholder="Введите название компании" required>
+                    <div class="error-message" id="nameError">Пожалуйста, введите название компании</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Телефон: <span class="required">*</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="Введите номер телефона" required>
+                    <div class="error-message" id="phoneError">Пожалуйста, введите номер телефона</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" placeholder="Введите email">
+                    <div class="error-message" id="emailError">Пожалуйста, введите корректный email</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="address">Адрес:</label>
+                    <input type="text" id="address" name="address" placeholder="Введите адрес">
+                </div>
+                
+                {{if .error}}
+                <div style="color: #e74c3c; margin-bottom: 15px; padding: 10px; background: #fdeaea; border-radius: 4px;">
+                    {{.error}}
+                </div>
+                {{end}}
+                
+                <div class="button-group">
+                    <button type="submit" class="btn btn-save">
+                        <span style="font-size: 18px;">✓</span> Сохранить
+                    </button>
+                    <a href="/suppliers" class="btn btn-back">
+                        <span style="font-size: 18px;">←</span> Назад к списку поставщиков
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // DOM элементы
+        const form = document.getElementById('supplierForm');
+        
+        // Регулярные выражения для валидации
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^[\+]?[0-9\s\-\(\)]+$/;
+        
+        // Функция для проверки email
+        function isValidEmail(email) {
+            return email === '' || emailRegex.test(email);
+        }
+        
+        // Функция для проверки телефона
+        function isValidPhone(phone) {
+            return phoneRegex.test(phone);
+        }
+        
+        // Функция для показа ошибки поля
+        function showError(fieldId, errorId, message) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(errorId);
+            
+            field.style.borderColor = '#e74c3c';
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+        
+        // Функция для скрытия ошибки поля
+        function hideError(fieldId, errorId) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(errorId);
+            
+            field.style.borderColor = '#ddd';
+            errorElement.style.display = 'none';
+        }
+        
+        // Обработчик отправки формы
+        form.addEventListener('submit', function(event) {
+            // Получаем значения из формы
+            const name = document.getElementById('name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const address = document.getElementById('address').value.trim();
+            
+            // Сбрасываем ошибки
+            hideError('name', 'nameError');
+            hideError('phone', 'phoneError');
+            hideError('email', 'emailError');
+            
+            // Валидация полей
+            let isValid = true;
+            
+            if (!name) {
+                showError('name', 'nameError', 'Пожалуйста, введите название компании');
+                isValid = false;
+            }
+            
+            if (!phone) {
+                showError('phone', 'phoneError', 'Пожалуйста, введите номер телефона');
+                isValid = false;
+            } else if (!isValidPhone(phone)) {
+                showError('phone', 'phoneError', 'Пожалуйста, введите корректный номер телефона');
+                isValid = false;
+            }
+            
+            if (email && !isValidEmail(email)) {
+                showError('email', 'emailError', 'Пожалуйста, введите корректный email');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                event.preventDefault();
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Обработчики событий для сброса ошибок при вводе
+        document.getElementById('name').addEventListener('input', function() {
+            hideError('name', 'nameError');
+        });
+        
+        document.getElementById('phone').addEventListener('input', function() {
+            hideError('phone', 'phoneError');
+        });
+        
+        document.getElementById('email').addEventListener('input', function() {
+            hideError('email', 'emailError');
+        });
+        
+        // Автоматическое форматирование телефона
+        document.getElementById('phone').addEventListener('blur', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length === 11) {
+                e.target.value = `+7 (${value.substring(1, 4)}) ${value.substring(4, 7)}-${value.substring(7, 9)}-${value.substring(9)}`;
+            }
+        });
+    </script>
+</body>
+</html>

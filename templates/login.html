@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в систему</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #6c63ff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 350px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: normal;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #6c63ff;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c62828;
+            font-size: 14px;
+        }
+        
+        .btn-login {
+            background-color: #6c63ff;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: normal;
+        }
+        
+        .btn-login:hover {
+            background-color: #554fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>Вход в систему</h1>
+        
+        {{if .error}}
+        <div class="error">
+            {{.error}}
+        </div>
+        {{end}}
+        
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <input type="text" name="username" class="form-input" placeholder="Логин" required>
+            </div>
+            
+            <div class="form-group">
+                <input type="password" name="password" class="form-input" placeholder="Пароль" required>
+            </div>
+            
+            <button type="submit" class="btn-login">Войти</button>
+        </form>
+    </div>
+</body>
+</html>
