@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}} - СкладPRO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: white;
+            color: #333;
+            line-height: 1.6;
+            padding: 30px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .page-title {
+            font-size: 32px;
+            color: #000000;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+        
+        .form-container {
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .form-error {
+            color: #e74c3c;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #fdeaea;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-save {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-back {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-back:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">{{.title}}</h1>
+        
+        <div class="form-container">
+            <form id="categoryForm" action="{{.action}}" method="POST">
+                {{if .error}}
+                <div class="form-error">
+                    {{.error}}
+                </div>
+                {{end}}
+                
+                <div class="form-group">
+                    <label for="name">Название: <span style="color: #e74c3c;">*</span></label>
+                    <input type="text" id="name" name="name" placeholder="Введите название категории" required 
+                           value="{{.category.Name}}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Описание:</label>
+                    <textarea id="description" name="description" placeholder="Введите описание категории">{{.category.Description}}</textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="btn btn-save">
+                        <span style="font-size: 18px;">✓</span> Сохранить
+                    </button>
+                    <a href="/categories" class="btn btn-back">
+                        <span style="font-size: 18px;">←</span> Назад к списку категорий
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Простая валидация
+        document.getElementById('categoryForm').addEventListener('submit', function(event) {
+            const name = document.getElementById('name').value.trim();
+            if (!name) {
+                event.preventDefault();
+                alert('Пожалуйста, введите название категории');
+                return false;
+            }
+            return true;
+        });
+    </script>
+</body>
+</html>

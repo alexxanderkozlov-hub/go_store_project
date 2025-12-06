@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Категории товаров - СкладPRO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: white;
+            color: #333;
+            line-height: 1.6;
+            padding: 30px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .page-title {
+            font-size: 32px;
+            color: #000000;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+        
+        /* Фильтры */
+        .filters {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-group label {
+            font-size: 15px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            background: white;
+            min-width: 180px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn-apply {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-apply:hover {
+            background: #2980b9;
+        }
+        
+        .btn-reset {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-reset:hover {
+            background: #7f8c8d;
+        }
+        
+        /* Кнопки действий */
+        .top-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .top-btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none; /* Важно! */
+        }
+        
+        .top-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* Таблица с вертикальными линиями */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: #f8fafc;
+            color: #2c3e50;
+            font-weight: 600;
+            text-align: left;
+            padding: 16px 20px;
+            border-bottom: 2px solid #e0e0e0;
+            border-right: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        th:hover {
+            background: #e8f4fc;
+        }
+        
+        th.sort-asc::after {
+            content: " ▲";
+            font-size: 12px;
+        }
+        
+        th.sort-desc::after {
+            content: " ▼";
+            font-size: 12px;
+        }
+        
+        th:last-child {
+            border-right: none;
+        }
+        
+        td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            border-right: 1px solid #f0f0f0;
+        }
+        
+        td:last-child {
+            border-right: none;
+        }
+        
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .actions-cell {
+            width: 200px;
+        }
+        
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        
+        .btn-edit {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #2980b9;
+        }
+        
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c0392b;
+        }
+        
+        /* Назад - исправленная кнопка */
+        .back-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .back-btn {
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: #2980b9;
+            transform: none;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* Последняя строка без нижней границы */
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Сообщение "нет данных" */
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
+        /* Иконки для кнопок скачивания */
+        .download-icon {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Категории товаров</h1>
+        
+        <!-- Фильтры -->
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Категория:</label>
+                    <input type="text" id="category-search" placeholder="Введите название" value="{{.search_query}}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Сортировать по:</label>
+                    <select id="sort">
+                        <option value="">Без сортировки</option>
+                        <option value="id" {{if eq .sort_by "id"}}selected{{end}}>ID</option>
+                        <option value="name" {{if eq .sort_by "name"}}selected{{end}}>Названию</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Направление:</label>
+                    <select id="direction">
+                        <option value="asc" {{if eq .direction "asc"}}selected{{end}}>По возрастанию</option>
+                        <option value="desc" {{if eq .direction "desc"}}selected{{end}}>По убыванию</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-buttons">
+                <button class="btn btn-apply" id="applyBtn">Применить</button>
+                <button class="btn btn-reset" id="resetBtn">Сбросить</button>
+            </div>
+        </div>
+        
+        <!-- Кнопки действий -->
+        <div class="top-buttons">
+            <button class="top-btn" onclick="window.location.href='/categories/create'">
+                <span style="font-size: 18px;">+</span> Добавить категорию
+            </button>
+            <button class="top-btn" onclick="alert('Функция скачивания TXT')">
+                <span class="download-icon">📥</span> Скачать TXT
+            </button>
+            <button class="top-btn" onclick="alert('Функция скачивания XLSX')">
+                <span class="download-icon">📊</span> Скачать XLSX
+            </button>
+        </div>
+        
+        <!-- Таблица -->
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable('id')" class="{{if eq .sort_by "id"}}{{if eq .direction "asc"}}sort-asc{{else}}sort-desc{{end}}{{end}}">ID</th>
+                    <th onclick="sortTable('name')" class="{{if eq .sort_by "name"}}{{if eq .direction "asc"}}sort-asc{{else}}sort-desc{{end}}{{end}}">Название</th>
+                    <th>Описание</th>
+                    <th class="actions-cell">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .categories}}
+                <tr>
+                    <td>{{.ID}}</td>
+                    <td>{{.Name}}</td>
+                    <td>{{.Description}}</td>
+                    <td class="actions-cell">
+                        <button class="action-btn btn-edit" onclick="window.location.href='/categories/{{.ID}}/edit'">Редактировать</button>
+                        <button class="action-btn btn-delete" onclick="if(confirm('Удалить категорию?')) window.location.href='/categories/{{.ID}}/delete'">Удалить</button>
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="4" class="no-data">
+                        {{if .search_query}}
+                        Категории по запросу "{{.search_query}}" не найдены
+                        {{else}}
+                        Категории не найдены. Добавьте первую категорию!
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        
+
+        
+        <!-- Исправленная кнопка "Назад" -->
+        <div class="back-container">
+            <a href="/main" class="back-btn">
+                <span>←</span> Назад в навигатор
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Применение фильтров
+        document.getElementById('applyBtn').addEventListener('click', function() {
+            applyFilters();
+        });
+        
+        // Сброс фильтров
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            window.location.href = '/categories';
+        });
+        
+        // Поиск при нажатии Enter
+        document.getElementById('category-search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+        
+        // Функция применения фильтров
+        function applyFilters() {
+            const search = document.getElementById('category-search').value;
+            const sort = document.getElementById('sort').value;
+            const direction = document.getElementById('direction').value;
+            
+            let url = '/categories?';
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (sort) url += `sort=${sort}&`;
+            if (direction) url += `direction=${direction}`;
+            
+            // Убираем последний & если есть
+            if (url.endsWith('&')) {
+                url = url.slice(0, -1);
+            }
+            
+            window.location.href = url;
+        }
+        
+        // Сортировка по клику на заголовок
+        function sortTable(sortBy) {
+            const search = document.getElementById('category-search').value;
+            const currentSort = document.getElementById('sort').value;
+            const currentDirection = document.getElementById('direction').value;
+            
+            let newDirection = 'asc';
+            if (currentSort === sortBy) {
+                newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            }
+            
+            let url = `/categories?sort=${sortBy}&direction=${newDirection}`;
+            if (search) {
+                url += `&search=${encodeURIComponent(search)}`;
+            }
+            
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>
