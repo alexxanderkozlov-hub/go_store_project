@@ -13,7 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ====================================================================
 // Структуры данных (в памяти)
+// ====================================================================
+
 type Store struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name"`
@@ -39,26 +42,37 @@ type Product struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Category struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type User struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"-"`
 }
 
+// ====================================================================
 // Хранилище в памяти
+// ====================================================================
+
 var (
 	stores     = make(map[int]Store)
 	suppliers  = make(map[int]Supplier)
 	products   = make(map[int]Product)
+	categories = make(map[int]Category)
 	users      = make(map[int]User)
 	storeID    = 0
 	supplierID = 0
 	productID  = 0
+	categoryID = 0
 	mu         sync.RWMutex
 )
 
 func init() {
-	// Находим максимальный ID при старте
+	// Инициализация для корректного поиска первого свободного ID
 	maxID := 0
 	for id := range stores {
 		if id > maxID {
@@ -116,6 +130,14 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/stores/:id/edit", storeUpdateHandler)
 	r.GET("/stores/:id/delete", storeDeleteHandler)
 
+	// Категории товаров (ПОЛНЫЙ CRUD)
+	r.GET("/categories", categoriesListPage)
+	r.GET("/categories/create", categoryCreatePage)
+	r.POST("/categories/create", categoryCreateHandler)
+	r.GET("/categories/:id/edit", categoryEditPage)
+	r.POST("/categories/:id/edit", categoryUpdateHandler)
+	r.GET("/categories/:id/delete", categoryDeleteHandler)
+
 	// Товары
 	r.GET("/products", productsList)
 	r.GET("/products/create", productCreatePage)
@@ -124,7 +146,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/products/:id/edit", productUpdateHandler)
 	r.GET("/products/:id/delete", productDeleteHandler)
 
-	// ПОСТАВЩИКИ (ИСПРАВЛЕНО - ДОБАВЛЕНЫ ВСЕ ОБРАБОТЧИКИ И СОРТИРОВКА)
+	// ПОСТАВЩИКИ
 	r.GET("/suppliers", suppliersPage)
 	r.GET("/suppliers/create", supplierCreatePage)
 	r.POST("/suppliers/create", supplierCreateHandler)
@@ -137,7 +159,246 @@ func setupRoutes(r *gin.Engine) {
 	r.GET("/contacts", contactsPage)
 }
 
-// ========== АВТОРИЗАЦИЯ ==========
+// ====================================================================
+// ОБРАБОТЧИКИ КАТЕГОРИЙ
+// ====================================================================
+
+// Список категорий с сортировкой и поиском
+func categoriesListPage(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	mu.RLock()
+	categoryList := make([]Category, 0, len(categories))
+	for _, cat := range categories {
+		categoryList = append(categoryList, cat)
+	}
+	mu.RUnlock()
+
+	// Получаем параметры сортировки и поиска
+	sortBy := c.DefaultQuery("sort", "id")
+	direction := c.DefaultQuery("direction", "asc")
+	searchQuery := c.Query("search")
+
+	// Фильтрация по поиску
+	if searchQuery != "" {
+		filteredList := make([]Category, 0)
+		searchLower := strings.ToLower(searchQuery)
+		for _, category := range categoryList {
+			if strings.Contains(strings.ToLower(category.Name), searchLower) ||
+				strings.Contains(strings.ToLower(category.Description), searchLower) {
+				filteredList = append(filteredList, category)
+			}
+		}
+		categoryList = filteredList
+	}
+
+	// Сортируем категории
+	sortCategories(categoryList, sortBy, direction)
+
+	c.HTML(http.StatusOK, "categories.html", gin.H{
+		"username":     getUsername(c),
+		"categories":   categoryList,
+		"total_count":  len(categoryList),
+		"search_query": searchQuery,
+		"sort_by":      sortBy,
+		"direction":    direction,
+	})
+}
+
+// Функция сортировки категорий
+func sortCategories(categories []Category, sortBy, direction string) {
+	switch sortBy {
+	case "id":
+		if direction == "asc" {
+			sort.Slice(categories, func(i, j int) bool {
+				return categories[i].ID < categories[j].ID
+			})
+		} else {
+			sort.Slice(categories, func(i, j int) bool {
+				return categories[i].ID > categories[j].ID
+			})
+		}
+	case "name":
+		if direction == "asc" {
+			sort.Slice(categories, func(i, j int) bool {
+				return strings.ToLower(categories[i].Name) < strings.ToLower(categories[j].Name)
+			})
+		} else {
+			sort.Slice(categories, func(i, j int) bool {
+				return strings.ToLower(categories[i].Name) > strings.ToLower(categories[j].Name)
+			})
+		}
+	}
+}
+
+// Страница создания категории
+func categoryCreatePage(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Создаем пустую категорию для формы
+	category := Category{}
+
+	c.HTML(http.StatusOK, "category_form.html", gin.H{
+		"title":    "Создать категорию",
+		"action":   "/categories/create",
+		"category": category,
+	})
+}
+
+// Обработчик сохранения категории
+func categoryCreateHandler(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+
+	if name == "" {
+		c.HTML(http.StatusOK, "category_form.html", gin.H{
+			"title":  "Создать категорию",
+			"action": "/categories/create",
+			"error":  "Название категории обязательно",
+			"category": Category{
+				Name:        name,
+				Description: description,
+			},
+		})
+		return
+	}
+
+	mu.Lock()
+
+	// Находим первый свободный ID
+	newID := 1
+	for {
+		if _, exists := categories[newID]; !exists {
+			break
+		}
+		newID++
+	}
+
+	categories[newID] = Category{
+		ID:          newID,
+		Name:        name,
+		Description: description,
+	}
+
+	if newID > categoryID {
+		categoryID = newID
+	}
+
+	mu.Unlock()
+
+	c.Redirect(http.StatusFound, "/categories")
+}
+
+// Редактирование категории
+func categoryEditPage(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/categories")
+		return
+	}
+
+	mu.RLock()
+	category, exists := categories[id]
+	mu.RUnlock()
+
+	if !exists {
+		c.Redirect(http.StatusFound, "/categories")
+		return
+	}
+
+	c.HTML(http.StatusOK, "category_form.html", gin.H{
+		"title":    "Редактировать категорию",
+		"action":   fmt.Sprintf("/categories/%d/edit", id),
+		"category": category,
+	})
+}
+
+// Обновление категории
+func categoryUpdateHandler(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/categories")
+		return
+	}
+
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+
+	if name == "" {
+		c.HTML(http.StatusOK, "category_form.html", gin.H{
+			"title":  "Редактировать категорию",
+			"action": fmt.Sprintf("/categories/%d/edit", id),
+			"error":  "Название категории обязательно",
+			"category": Category{
+				ID:          id,
+				Name:        name,
+				Description: description,
+			},
+		})
+		return
+	}
+
+	mu.Lock()
+	category, exists := categories[id]
+	if !exists {
+		mu.Unlock()
+		c.Redirect(http.StatusFound, "/categories")
+		return
+	}
+
+	category.Name = name
+	category.Description = description
+	categories[id] = category
+	mu.Unlock()
+
+	c.Redirect(http.StatusFound, "/categories")
+}
+
+// Удаление категории
+func categoryDeleteHandler(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/categories")
+		return
+	}
+
+	mu.Lock()
+	delete(categories, id)
+	mu.Unlock()
+
+	c.Redirect(http.StatusFound, "/categories")
+}
+
+// ====================================================================
+// АВТОРИЗАЦИЯ
+// ====================================================================
+
 func loginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{})
 }
@@ -170,7 +431,10 @@ func checkAuth(c *gin.Context) bool {
 	return err == nil && auth == "true"
 }
 
-// ========== ГЛАВНОЕ МЕНЮ (stores.html) ==========
+// ====================================================================
+// ГЛАВНОЕ МЕНЮ
+// ====================================================================
+
 func mainMenuPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -189,7 +453,10 @@ func getUsername(c *gin.Context) string {
 	return username
 }
 
-// ========== ПОСТАВЩИКИ ==========
+// ====================================================================
+// ПОСТАВЩИКИ
+// ====================================================================
+
 func suppliersPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -204,8 +471,8 @@ func suppliersPage(c *gin.Context) {
 	mu.RUnlock()
 
 	// Получаем параметры сортировки
-	sortBy := c.DefaultQuery("sort", "id")          // по умолчанию сортируем по ID
-	direction := c.DefaultQuery("direction", "asc") // по умолчанию по возрастанию
+	sortBy := c.DefaultQuery("sort", "id")
+	direction := c.DefaultQuery("direction", "asc")
 
 	// Фильтрация по поиску
 	searchQuery := c.Query("search")
@@ -270,7 +537,6 @@ func sortSuppliers(suppliers []Supplier, sortBy, direction string) {
 			})
 		}
 	}
-	// Если sortBy пустое или неизвестное, оставляем как есть
 }
 
 func supplierCreatePage(c *gin.Context) {
@@ -340,7 +606,6 @@ func supplierCreateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/suppliers")
 }
 
-// ДОБАВЛЕНО: Редактирование поставщика
 func supplierEditPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -369,7 +634,6 @@ func supplierEditPage(c *gin.Context) {
 	})
 }
 
-// ДОБАВЛЕНО: Обновление поставщика
 func supplierUpdateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -402,7 +666,6 @@ func supplierUpdateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/suppliers")
 }
 
-// ДОБАВЛЕНО: Удаление поставщика
 func supplierDeleteHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -422,7 +685,10 @@ func supplierDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/suppliers")
 }
 
-// ========== СТРАНИЦА МАГАЗИНОВ (store.html) ==========
+// ====================================================================
+// СТРАНИЦА МАГАЗИНОВ
+// ====================================================================
+
 func storeListPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -485,7 +751,6 @@ func sortStores(stores []Store, sortBy, direction string) {
 			})
 		}
 	}
-	// Если sortBy пустое или неизвестное, оставляем как есть
 }
 
 func storeCreatePage(c *gin.Context) {
@@ -622,7 +887,10 @@ func storeDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/stores")
 }
 
-// ========== ТОВАРЫ ==========
+// ====================================================================
+// ТОВАРЫ
+// ====================================================================
+
 func productsList(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -812,7 +1080,9 @@ func productDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/products")
 }
 
-// ========== СТАТИЧЕСКИЕ СТРАНИЦЫ ==========
+// ====================================================================
+// СТАТИЧЕСКИЕ СТРАНИЦЫ
+// ====================================================================
 func aboutPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
