@@ -39,6 +39,8 @@ type Product struct {
 	Price       float64   `json:"price"`
 	Description string    `json:"description"`
 	Photo       string    `json:"photo"`
+	CategoryID  int       `json:"category_id"`
+	SKU         string    `json:"sku"` // ДОБАВЛЕНО: поле для артикула
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -888,7 +890,7 @@ func storeDeleteHandler(c *gin.Context) {
 }
 
 // ====================================================================
-// ТОВАРЫ
+// ТОВАРЫ (ПОЛНЫЙ CRUD)
 // ====================================================================
 
 func productsList(c *gin.Context) {
@@ -904,35 +906,136 @@ func productsList(c *gin.Context) {
 	}
 	mu.RUnlock()
 
-	// Рассчитываем среднюю цену
+	// Получаем параметры сортировки и поиска
+	sortBy := c.DefaultQuery("sort", "id")
+	direction := c.DefaultQuery("direction", "asc")
+	searchQuery := c.Query("search")
+
+	// Фильтрация по поиску
+	if searchQuery != "" {
+		filteredList := make([]Product, 0)
+		searchLower := strings.ToLower(searchQuery)
+		for _, product := range productList {
+			if strings.Contains(strings.ToLower(product.Name), searchLower) ||
+				strings.Contains(strings.ToLower(product.Description), searchLower) ||
+				strings.Contains(strings.ToLower(product.SKU), searchLower) { // ДОБАВЛЕНО: поиск по артикулу
+				filteredList = append(filteredList, product)
+			}
+		}
+		productList = filteredList
+	}
+
+	// Сортируем товары
+	sortProducts(productList, sortBy, direction)
+
+	// Рассчитываем статистику
 	var totalPrice float64
+	var minPrice, maxPrice float64
+	if len(productList) > 0 {
+		minPrice = productList[0].Price
+		maxPrice = productList[0].Price
+	}
+
 	for _, p := range productList {
 		totalPrice += p.Price
+		if p.Price < minPrice {
+			minPrice = p.Price
+		}
+		if p.Price > maxPrice {
+			maxPrice = p.Price
+		}
 	}
+
 	avgPrice := 0.0
 	if len(productList) > 0 {
 		avgPrice = totalPrice / float64(len(productList))
 	}
 
 	c.HTML(http.StatusOK, "products.html", gin.H{
+		"username":      getUsername(c),
 		"products":      productList,
 		"total_count":   len(productList),
 		"average_price": fmt.Sprintf("%.2f", avgPrice),
+		"min_price":     fmt.Sprintf("%.2f", minPrice),
+		"max_price":     fmt.Sprintf("%.2f", maxPrice),
+		"total_value":   fmt.Sprintf("%.2f", totalPrice),
+		"search_query":  searchQuery,
+		"sort_by":       sortBy,
+		"direction":     direction,
 	})
 }
 
+// Функция сортировки товаров
+func sortProducts(products []Product, sortBy, direction string) {
+	switch sortBy {
+	case "id":
+		if direction == "asc" {
+			sort.Slice(products, func(i, j int) bool {
+				return products[i].ID < products[j].ID
+			})
+		} else {
+			sort.Slice(products, func(i, j int) bool {
+				return products[i].ID > products[j].ID
+			})
+		}
+	case "name":
+		if direction == "asc" {
+			sort.Slice(products, func(i, j int) bool {
+				return strings.ToLower(products[i].Name) < strings.ToLower(products[j].Name)
+			})
+		} else {
+			sort.Slice(products, func(i, j int) bool {
+				return strings.ToLower(products[i].Name) > strings.ToLower(products[j].Name)
+			})
+		}
+	case "price":
+		if direction == "asc" {
+			sort.Slice(products, func(i, j int) bool {
+				return products[i].Price < products[j].Price
+			})
+		} else {
+			sort.Slice(products, func(i, j int) bool {
+				return products[i].Price > products[j].Price
+			})
+		}
+	case "sku": // ДОБАВЛЕНО: сортировка по артикулу
+		if direction == "asc" {
+			sort.Slice(products, func(i, j int) bool {
+				return strings.ToLower(products[i].SKU) < strings.ToLower(products[j].SKU)
+			})
+		} else {
+			sort.Slice(products, func(i, j int) bool {
+				return strings.ToLower(products[i].SKU) > strings.ToLower(products[j].SKU)
+			})
+		}
+	}
+}
+
+// Страница создания товара
 func productCreatePage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
 
+	// Получаем список категорий для выпадающего списка
+	mu.RLock()
+	categoryList := make([]Category, 0, len(categories))
+	for _, cat := range categories {
+		categoryList = append(categoryList, cat)
+	}
+	mu.RUnlock()
+
 	c.HTML(http.StatusOK, "product_form.html", gin.H{
-		"title":  "Добавить товар",
-		"action": "/products/create",
+		"title":      "Добавить товар",
+		"action":     "/products/create",
+		"product":    Product{},
+		"categories": categoryList,
+		"mode":       "create",
 	})
 }
 
+// Обработчик создания товара
 func productCreateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -942,8 +1045,18 @@ func productCreateHandler(c *gin.Context) {
 	name := c.PostForm("name")
 	priceStr := c.PostForm("price")
 	description := c.PostForm("description")
+	sku := c.PostForm("sku") // ДОБАВЛЕНО: получаем артикул
+	categoryIDStr := c.PostForm("category_id")
 
+	// Валидация
 	if name == "" || priceStr == "" {
+		mu.RLock()
+		categoryList := make([]Category, 0, len(categories))
+		for _, cat := range categories {
+			categoryList = append(categoryList, cat)
+		}
+		mu.RUnlock()
+
 		c.HTML(http.StatusOK, "product_form.html", gin.H{
 			"title":  "Добавить товар",
 			"action": "/products/create",
@@ -951,13 +1064,23 @@ func productCreateHandler(c *gin.Context) {
 			"product": Product{
 				Name:        name,
 				Description: description,
+				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
 			},
+			"categories": categoryList,
+			"mode":       "create",
 		})
 		return
 	}
 
 	price, err := strconv.ParseFloat(priceStr, 64)
-	if err != nil {
+	if err != nil || price < 0 {
+		mu.RLock()
+		categoryList := make([]Category, 0, len(categories))
+		for _, cat := range categories {
+			categoryList = append(categoryList, cat)
+		}
+		mu.RUnlock()
+
 		c.HTML(http.StatusOK, "product_form.html", gin.H{
 			"title":  "Добавить товар",
 			"action": "/products/create",
@@ -965,14 +1088,25 @@ func productCreateHandler(c *gin.Context) {
 			"product": Product{
 				Name:        name,
 				Description: description,
+				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
 			},
+			"categories": categoryList,
+			"mode":       "create",
 		})
 		return
 	}
 
+	// Преобразуем category_id в int
+	var categoryID int
+	if categoryIDStr != "" {
+		if id, err := strconv.Atoi(categoryIDStr); err == nil {
+			categoryID = id
+		}
+	}
+
 	mu.Lock()
 
-	// Находим первый свободный ID для товаров (1, 2, 3...)
+	// Находим первый свободный ID
 	newID := 1
 	for {
 		if _, exists := products[newID]; !exists {
@@ -986,10 +1120,11 @@ func productCreateHandler(c *gin.Context) {
 		Name:        name,
 		Price:       price,
 		Description: description,
+		SKU:         sku, // ДОБАВЛЕНО: сохраняем артикул
+		CategoryID:  categoryID,
 		CreatedAt:   time.Now(),
 	}
 
-	// Обновляем productID если новый ID больше
 	if newID > productID {
 		productID = newID
 	}
@@ -999,6 +1134,7 @@ func productCreateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/products")
 }
 
+// Страница редактирования товара
 func productEditPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1013,6 +1149,12 @@ func productEditPage(c *gin.Context) {
 
 	mu.RLock()
 	product, exists := products[id]
+
+	// Получаем список категорий
+	categoryList := make([]Category, 0, len(categories))
+	for _, cat := range categories {
+		categoryList = append(categoryList, cat)
+	}
 	mu.RUnlock()
 
 	if !exists {
@@ -1021,12 +1163,15 @@ func productEditPage(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "product_form.html", gin.H{
-		"title":   "Редактировать товар",
-		"action":  fmt.Sprintf("/products/%d/edit", id),
-		"product": product,
+		"title":      "Редактировать товар",
+		"action":     fmt.Sprintf("/products/%d/edit", id),
+		"product":    product,
+		"categories": categoryList,
+		"mode":       "edit",
 	})
 }
 
+// Обработчик обновления товара
 func productUpdateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1039,6 +1184,70 @@ func productUpdateHandler(c *gin.Context) {
 		return
 	}
 
+	name := c.PostForm("name")
+	priceStr := c.PostForm("price")
+	description := c.PostForm("description")
+	sku := c.PostForm("sku") // ДОБАВЛЕНО: получаем артикул
+	categoryIDStr := c.PostForm("category_id")
+
+	// Валидация
+	if name == "" || priceStr == "" {
+		mu.RLock()
+		categoryList := make([]Category, 0, len(categories))
+		for _, cat := range categories {
+			categoryList = append(categoryList, cat)
+		}
+		mu.RUnlock()
+
+		c.HTML(http.StatusOK, "product_form.html", gin.H{
+			"title":  "Редактировать товар",
+			"action": fmt.Sprintf("/products/%d/edit", id),
+			"error":  "Название и цена обязательны",
+			"product": Product{
+				ID:          id,
+				Name:        name,
+				Description: description,
+				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
+			},
+			"categories": categoryList,
+			"mode":       "edit",
+		})
+		return
+	}
+
+	price, err := strconv.ParseFloat(priceStr, 64)
+	if err != nil || price < 0 {
+		mu.RLock()
+		categoryList := make([]Category, 0, len(categories))
+		for _, cat := range categories {
+			categoryList = append(categoryList, cat)
+		}
+		mu.RUnlock()
+
+		c.HTML(http.StatusOK, "product_form.html", gin.H{
+			"title":  "Редактировать товар",
+			"action": fmt.Sprintf("/products/%d/edit", id),
+			"error":  "Неверный формат цены",
+			"product": Product{
+				ID:          id,
+				Name:        name,
+				Description: description,
+				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
+			},
+			"categories": categoryList,
+			"mode":       "edit",
+		})
+		return
+	}
+
+	// Преобразуем category_id в int
+	var categoryID int
+	if categoryIDStr != "" {
+		if id, err := strconv.Atoi(categoryIDStr); err == nil {
+			categoryID = id
+		}
+	}
+
 	mu.Lock()
 	product, exists := products[id]
 	if !exists {
@@ -1047,13 +1256,12 @@ func productUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	product.Name = c.PostForm("name")
-	product.Description = c.PostForm("description")
-
-	priceStr := c.PostForm("price")
-	if price, err := strconv.ParseFloat(priceStr, 64); err == nil {
-		product.Price = price
-	}
+	// Обновляем данные
+	product.Name = name
+	product.Price = price
+	product.Description = description
+	product.SKU = sku // ДОБАВЛЕНО: обновляем артикул
+	product.CategoryID = categoryID
 
 	products[id] = product
 	mu.Unlock()
@@ -1061,6 +1269,7 @@ func productUpdateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/products")
 }
 
+// Удаление товара
 func productDeleteHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
