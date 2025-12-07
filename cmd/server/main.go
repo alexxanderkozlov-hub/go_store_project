@@ -56,6 +56,19 @@ type User struct {
 	Password string `json:"-"`
 }
 
+type Supply struct {
+	ID         int       `json:"id"`
+	SupplierID int       `json:"supplier_id"`
+	ProductID  int       `json:"product_id"`
+	Quantity   int       `json:"quantity"`
+	Price      float64   `json:"price"` // Цена за единицу при поставке
+	Total      float64   `json:"total"` // Общая стоимость = Quantity * Price
+	Date       time.Time `json:"date"`
+	Status     string    `json:"status"` // pending, delivered, cancelled
+	Notes      string    `json:"notes"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 // ====================================================================
 // Хранилище в памяти
 // ====================================================================
@@ -65,11 +78,13 @@ var (
 	suppliers  = make(map[int]Supplier)
 	products   = make(map[int]Product)
 	categories = make(map[int]Category)
+	supplies   = make(map[int]Supply) // ДОБАВЛЕНО: хранилище поставок
 	users      = make(map[int]User)
 	storeID    = 0
 	supplierID = 0
 	productID  = 0
 	categoryID = 0
+	supplyID   = 0 // ДОБАВЛЕНО: счетчик ID для поставок
 	mu         sync.RWMutex
 )
 
@@ -155,6 +170,14 @@ func setupRoutes(r *gin.Engine) {
 	r.GET("/suppliers/:id/edit", supplierEditPage)
 	r.POST("/suppliers/:id/edit", supplierUpdateHandler)
 	r.GET("/suppliers/:id/delete", supplierDeleteHandler)
+
+	// ПОСТАВКИ (ДОБАВЛЕНО)
+	r.GET("/supplies", suppliesPage)
+	r.GET("/supplies/create", supplyCreatePage)
+	r.POST("/supplies/create", supplyCreateHandler)
+	r.GET("/supplies/:id/edit", supplyEditPage)
+	r.POST("/supplies/:id/edit", supplyUpdateHandler)
+	r.GET("/supplies/:id/delete", supplyDeleteHandler)
 
 	// Статические страницы
 	r.GET("/about", aboutPage)
@@ -1287,6 +1310,532 @@ func productDeleteHandler(c *gin.Context) {
 	mu.Unlock()
 
 	c.Redirect(http.StatusFound, "/products")
+}
+
+// ====================================================================
+// ПОСТАВКИ (ПОЛНЫЙ CRUD)
+// ====================================================================
+
+// Список поставок с сортировкой и поиском
+func suppliesPage(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	mu.RLock()
+	supplyList := make([]Supply, 0, len(supplies))
+	for _, supply := range supplies {
+		supplyList = append(supplyList, supply)
+	}
+
+	// Получаем данные поставщиков и товаров для отображения
+	supplierMap := make(map[int]Supplier)
+	for id, supplier := range suppliers {
+		supplierMap[id] = supplier
+	}
+
+	productMap := make(map[int]Product)
+	for id, product := range products {
+		productMap[id] = product
+	}
+	mu.RUnlock()
+
+	// Получаем параметры сортировки и поиска
+	sortBy := c.DefaultQuery("sort", "id")
+	direction := c.DefaultQuery("direction", "asc")
+	searchQuery := c.Query("search")
+	statusFilter := c.Query("status")
+
+	// Фильтрация по поиску и статусу
+	if searchQuery != "" || statusFilter != "" {
+		filteredList := make([]Supply, 0)
+		searchLower := strings.ToLower(searchQuery)
+
+		for _, supply := range supplyList {
+			// Фильтрация по статусу
+			if statusFilter != "" && supply.Status != statusFilter {
+				continue
+			}
+
+			// Фильтрация по поиску
+			if searchQuery != "" {
+				supplier := supplierMap[supply.SupplierID]
+				product := productMap[supply.ProductID]
+
+				if strings.Contains(strings.ToLower(supplier.Name), searchLower) ||
+					strings.Contains(strings.ToLower(product.Name), searchLower) ||
+					strings.Contains(strings.ToLower(supply.Notes), searchLower) {
+					filteredList = append(filteredList, supply)
+				}
+			} else {
+				filteredList = append(filteredList, supply)
+			}
+		}
+		supplyList = filteredList
+	}
+
+	// Сортируем поставки
+	sortSupplies(supplyList, sortBy, direction)
+
+	// Рассчитываем статистику
+	var totalQuantity int
+	var totalCost float64
+	for _, s := range supplyList {
+		totalQuantity += s.Quantity
+		totalCost += s.Total
+	}
+
+	// Подготавливаем данные для шаблона
+	supplyData := make([]gin.H, 0, len(supplyList))
+	for _, supply := range supplyList {
+		supplier := supplierMap[supply.SupplierID]
+		product := productMap[supply.ProductID]
+
+		supplyData = append(supplyData, gin.H{
+			"ID":          supply.ID,
+			"SupplierID":  supply.SupplierID,
+			"Supplier":    supplier.Name,
+			"ProductID":   supply.ProductID,
+			"Product":     product.Name,
+			"Quantity":    supply.Quantity,
+			"Price":       supply.Price,
+			"Total":       supply.Total,
+			"Date":        supply.Date.Format("02.01.2006"),
+			"Status":      supply.Status,
+			"StatusText":  getStatusText(supply.Status),
+			"StatusClass": getStatusClass(supply.Status),
+			"Notes":       supply.Notes,
+			"CreatedAt":   supply.CreatedAt.Format("02.01.2006 15:04"),
+		})
+	}
+
+	c.HTML(http.StatusOK, "supplies.html", gin.H{
+		"username":       getUsername(c),
+		"supplies":       supplyData,
+		"total_count":    len(supplyList),
+		"total_quantity": totalQuantity,
+		"total_cost":     fmt.Sprintf("%.2f", totalCost),
+		"search_query":   searchQuery,
+		"status_filter":  statusFilter,
+		"sort_by":        sortBy,
+		"direction":      direction,
+	})
+}
+
+// Функция сортировки поставок
+func sortSupplies(supplies []Supply, sortBy, direction string) {
+	switch sortBy {
+	case "id":
+		if direction == "asc" {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].ID < supplies[j].ID
+			})
+		} else {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].ID > supplies[j].ID
+			})
+		}
+	case "date":
+		if direction == "asc" {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].Date.Before(supplies[j].Date)
+			})
+		} else {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].Date.After(supplies[j].Date)
+			})
+		}
+	case "total":
+		if direction == "asc" {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].Total < supplies[j].Total
+			})
+		} else {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].Total > supplies[j].Total
+			})
+		}
+	case "quantity":
+		if direction == "asc" {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].Quantity < supplies[j].Quantity
+			})
+		} else {
+			sort.Slice(supplies, func(i, j int) bool {
+				return supplies[i].Quantity > supplies[j].Quantity
+			})
+		}
+	}
+}
+
+// Функции для статусов
+func getStatusText(status string) string {
+	switch status {
+	case "pending":
+		return "Ожидается"
+	case "delivered":
+		return "Доставлено"
+	case "cancelled":
+		return "Отменено"
+	default:
+		return status
+	}
+}
+
+func getStatusClass(status string) string {
+	switch status {
+	case "pending":
+		return "status-pending"
+	case "delivered":
+		return "status-delivered"
+	case "cancelled":
+		return "status-cancelled"
+	default:
+		return "status-default"
+	}
+}
+
+// Страница создания поставки
+func supplyCreatePage(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	mu.RLock()
+	// Получаем списки поставщиков и товаров
+	supplierList := make([]Supplier, 0, len(suppliers))
+	for _, supplier := range suppliers {
+		supplierList = append(supplierList, supplier)
+	}
+
+	productList := make([]Product, 0, len(products))
+	for _, product := range products {
+		productList = append(productList, product)
+	}
+	mu.RUnlock()
+
+	c.HTML(http.StatusOK, "supplies_form.html", gin.H{
+		"title":     "Создать поставку",
+		"action":    "/supplies/create",
+		"supply":    Supply{Date: time.Now(), Status: "pending"},
+		"suppliers": supplierList,
+		"products":  productList,
+		"mode":      "create",
+		"now":       time.Now(), // ДОБАВЛЕНО: передаем текущее время в шаблон
+	})
+}
+
+// Обработчик создания поставки
+func supplyCreateHandler(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	supplierIDStr := c.PostForm("supplier_id")
+	productIDStr := c.PostForm("product_id")
+	quantityStr := c.PostForm("quantity")
+	priceStr := c.PostForm("price")
+	dateStr := c.PostForm("date")
+	status := c.PostForm("status")
+	notes := c.PostForm("notes")
+
+	// Валидация
+	if supplierIDStr == "" || productIDStr == "" || quantityStr == "" || priceStr == "" {
+		mu.RLock()
+		supplierList := make([]Supplier, 0, len(suppliers))
+		for _, supplier := range suppliers {
+			supplierList = append(supplierList, supplier)
+		}
+
+		productList := make([]Product, 0, len(products))
+		for _, product := range products {
+			productList = append(productList, product)
+		}
+		mu.RUnlock()
+
+		c.HTML(http.StatusOK, "supplies_form.html", gin.H{
+			"title":  "Создать поставку",
+			"action": "/supplies/create",
+			"error":  "Заполните обязательные поля",
+			"supply": Supply{
+				Status: status,
+				Notes:  notes,
+			},
+			"suppliers": supplierList,
+			"products":  productList,
+			"mode":      "create",
+			"now":       time.Now(), // ДОБАВЛЕНО
+		})
+		return
+	}
+
+	// Парсинг данных
+	supplierID, err1 := strconv.Atoi(supplierIDStr)
+	productID, err2 := strconv.Atoi(productIDStr)
+	quantity, err3 := strconv.Atoi(quantityStr)
+	price, err4 := strconv.ParseFloat(priceStr, 64)
+
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || quantity <= 0 || price < 0 {
+		mu.RLock()
+		supplierList := make([]Supplier, 0, len(suppliers))
+		for _, supplier := range suppliers {
+			supplierList = append(supplierList, supplier)
+		}
+
+		productList := make([]Product, 0, len(products))
+		for _, product := range products {
+			productList = append(productList, product)
+		}
+		mu.RUnlock()
+
+		c.HTML(http.StatusOK, "supplies_form.html", gin.H{
+			"title":  "Создать поставку",
+			"action": "/supplies/create",
+			"error":  "Неверный формат данных",
+			"supply": Supply{
+				Status: status,
+				Notes:  notes,
+			},
+			"suppliers": supplierList,
+			"products":  productList,
+			"mode":      "create",
+			"now":       time.Now(), // ДОБАВЛЕНО
+		})
+		return
+	}
+
+	// Парсинг даты
+	var date time.Time
+	if dateStr != "" {
+		date, _ = time.Parse("2006-01-02", dateStr)
+	} else {
+		date = time.Now()
+	}
+
+	// Расчет общей стоимости
+	total := float64(quantity) * price
+
+	mu.Lock()
+
+	// Находим первый свободный ID
+	newID := 1
+	for {
+		if _, exists := supplies[newID]; !exists {
+			break
+		}
+		newID++
+	}
+
+	supplies[newID] = Supply{
+		ID:         newID,
+		SupplierID: supplierID,
+		ProductID:  productID,
+		Quantity:   quantity,
+		Price:      price,
+		Total:      total,
+		Date:       date,
+		Status:     status,
+		Notes:      notes,
+		CreatedAt:  time.Now(),
+	}
+
+	if newID > supplyID {
+		supplyID = newID
+	}
+
+	mu.Unlock()
+
+	c.Redirect(http.StatusFound, "/supplies")
+}
+
+// Страница редактирования поставки
+func supplyEditPage(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/supplies")
+		return
+	}
+
+	mu.RLock()
+	supply, exists := supplies[id]
+
+	// Получаем списки поставщиков и товаров
+	supplierList := make([]Supplier, 0, len(suppliers))
+	for _, supplier := range suppliers {
+		supplierList = append(supplierList, supplier)
+	}
+
+	productList := make([]Product, 0, len(products))
+	for _, product := range products {
+		productList = append(productList, product)
+	}
+	mu.RUnlock()
+
+	if !exists {
+		c.Redirect(http.StatusFound, "/supplies")
+		return
+	}
+
+	c.HTML(http.StatusOK, "supplies_form.html", gin.H{
+		"title":     "Редактировать поставку",
+		"action":    fmt.Sprintf("/supplies/%d/edit", id),
+		"supply":    supply,
+		"suppliers": supplierList,
+		"products":  productList,
+		"mode":      "edit",
+		"now":       time.Now(), // ДОБАВЛЕНО
+	})
+}
+
+// Обработчик обновления поставки
+func supplyUpdateHandler(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/supplies")
+		return
+	}
+
+	supplierIDStr := c.PostForm("supplier_id")
+	productIDStr := c.PostForm("product_id")
+	quantityStr := c.PostForm("quantity")
+	priceStr := c.PostForm("price")
+	dateStr := c.PostForm("date")
+	status := c.PostForm("status")
+	notes := c.PostForm("notes")
+
+	// Валидация
+	if supplierIDStr == "" || productIDStr == "" || quantityStr == "" || priceStr == "" {
+		mu.RLock()
+		supplierList := make([]Supplier, 0, len(suppliers))
+		for _, supplier := range suppliers {
+			supplierList = append(supplierList, supplier)
+		}
+
+		productList := make([]Product, 0, len(products))
+		for _, product := range products {
+			productList = append(productList, product)
+		}
+		mu.RUnlock()
+
+		c.HTML(http.StatusOK, "supplies_form.html", gin.H{
+			"title":  "Редактировать поставку",
+			"action": fmt.Sprintf("/supplies/%d/edit", id),
+			"error":  "Заполните обязательные поля",
+			"supply": Supply{
+				ID:     id,
+				Status: status,
+				Notes:  notes,
+			},
+			"suppliers": supplierList,
+			"products":  productList,
+			"mode":      "edit",
+			"now":       time.Now(), // ДОБАВЛЕНО
+		})
+		return
+	}
+
+	// Парсинг данных
+	supplierID, err1 := strconv.Atoi(supplierIDStr)
+	productID, err2 := strconv.Atoi(productIDStr)
+	quantity, err3 := strconv.Atoi(quantityStr)
+	price, err4 := strconv.ParseFloat(priceStr, 64)
+
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || quantity <= 0 || price < 0 {
+		mu.RLock()
+		supplierList := make([]Supplier, 0, len(suppliers))
+		for _, supplier := range suppliers {
+			supplierList = append(supplierList, supplier)
+		}
+
+		productList := make([]Product, 0, len(products))
+		for _, product := range products {
+			productList = append(productList, product)
+		}
+		mu.RUnlock()
+
+		c.HTML(http.StatusOK, "supplies_form.html", gin.H{
+			"title":  "Редактировать поставку",
+			"action": fmt.Sprintf("/supplies/%d/edit", id),
+			"error":  "Неверный формат данных",
+			"supply": Supply{
+				ID:     id,
+				Status: status,
+				Notes:  notes,
+			},
+			"suppliers": supplierList,
+			"products":  productList,
+			"mode":      "edit",
+			"now":       time.Now(), // ДОБАВЛЕНО
+		})
+		return
+	}
+
+	// Парсинг даты
+	var date time.Time
+	if dateStr != "" {
+		date, _ = time.Parse("2006-01-02", dateStr)
+	} else {
+		date = time.Now()
+	}
+
+	// Расчет общей стоимости
+	total := float64(quantity) * price
+
+	mu.Lock()
+	supply, exists := supplies[id]
+	if !exists {
+		mu.Unlock()
+		c.Redirect(http.StatusFound, "/supplies")
+		return
+	}
+
+	// Обновляем данные
+	supply.SupplierID = supplierID
+	supply.ProductID = productID
+	supply.Quantity = quantity
+	supply.Price = price
+	supply.Total = total
+	supply.Date = date
+	supply.Status = status
+	supply.Notes = notes
+
+	supplies[id] = supply
+	mu.Unlock()
+
+	c.Redirect(http.StatusFound, "/supplies")
+}
+
+// Удаление поставки
+func supplyDeleteHandler(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/supplies")
+		return
+	}
+
+	mu.Lock()
+	delete(supplies, id)
+	mu.Unlock()
+
+	c.Redirect(http.StatusFound, "/supplies")
 }
 
 // ====================================================================

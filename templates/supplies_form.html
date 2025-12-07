@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}} - Поставки</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .form-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 25px 30px;
+        }
+        
+        .form-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .form-body {
+            padding: 30px;
+        }
+        
+        .error-message {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #d32f2f;
+            font-size: 15px;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #27ae60;
+            font-size: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 15px;
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="date"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .form-group input[type="text"]:focus,
+        .form-group input[type="number"]:focus,
+        .form-group input[type="date"]:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .required::after {
+            content: " *";
+            color: #e74c3c;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 35px;
+            padding-top: 25px;
+            border-top: 1px solid #eee;
+        }
+        
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            flex: 1;
+        }
+        
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #2980b9, #2573a7);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-cancel {
+            background: #95a5a6;
+            color: white;
+            flex: 1;
+        }
+        
+        .btn-cancel:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(149, 165, 166, 0.3);
+        }
+        
+        .btn-submit:active,
+        .btn-cancel:active {
+            transform: translateY(0);
+        }
+        
+        .form-info {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+        }
+        
+        .form-info ul {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+        
+        .form-info li {
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #7f8c8d;
+            font-size: 14px;
+            padding: 10px;
+        }
+        
+        /* Расчет общей стоимости */
+        .total-calculation {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 16px;
+            color: #27ae60;
+            text-align: center;
+            border: 2px solid #a3e4d7;
+        }
+        
+        .total-calculation strong {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            <div class="form-header">
+                <h1>{{.title}}</h1>
+            </div>
+            
+            <div class="form-body">
+                {{if .error}}
+                <div class="error-message">
+                    <strong>Ошибка:</strong> {{.error}}
+                </div>
+                {{end}}
+                
+                {{if .success}}
+                <div class="success-message">
+                    <strong>Успешно!</strong> {{.success}}
+                </div>
+                {{end}}
+                
+                <form method="POST" action="{{.action}}" id="supplyForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="supplier_id" class="required">Поставщик</label>
+                            <select id="supplier_id" name="supplier_id" required>
+                                <option value="">Выберите поставщика</option>
+                                {{range .suppliers}}
+                                <option value="{{.ID}}" {{if eq .ID $.supply.SupplierID}}selected{{end}}>
+                                    {{.Name}} ({{.Phone}})
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="product_id" class="required">Товар</label>
+                            <select id="product_id" name="product_id" required>
+                                <option value="">Выберите товар</option>
+                                {{range .products}}
+                                <option value="{{.ID}}" {{if eq .ID $.supply.ProductID}}selected{{end}}>
+                                    {{.Name}} ({{printf "%.2f" .Price}} ₽)
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quantity" class="required">Количество</label>
+                            <input type="number" 
+                                   id="quantity" 
+                                   name="quantity" 
+                                   value="{{if .supply.Quantity}}{{.supply.Quantity}}{{else}}1{{end}}"
+                                   min="1"
+                                   step="1"
+                                   required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="price" class="required">Цена за единицу (₽)</label>
+                            <input type="number" 
+                                   id="price" 
+                                   name="price" 
+                                   value="{{if .supply.Price}}{{printf "%.2f" .supply.Price}}{{else}}0{{end}}"
+                                   step="0.01"
+                                   min="0"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <!-- Расчет общей стоимости -->
+                    <div class="total-calculation">
+                        Общая стоимость: <strong id="totalAmount">0.00</strong> ₽
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date" class="required">Дата поставки</label>
+                            <input type="date" 
+                                   id="date" 
+                                   name="date" 
+                                   value="{{if .supply.Date}}{{.supply.Date.Format "2006-01-02"}}{{else}}{{.now.Format "2006-01-02"}}{{end}}"
+                                   required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="status" class="required">Статус</label>
+                            <select id="status" name="status" required>
+                                <option value="pending" {{if eq .supply.Status "pending"}}selected{{end}}>Ожидается</option>
+                                <option value="delivered" {{if eq .supply.Status "delivered"}}selected{{end}}>Доставлено</option>
+                                <option value="cancelled" {{if eq .supply.Status "cancelled"}}selected{{end}}>Отменено</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Примечания</label>
+                        <textarea id="notes" 
+                                  name="notes" 
+                                  placeholder="Дополнительная информация о поставке...">{{.supply.Notes}}</textarea>
+                        <div style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
+                            Необязательно
+                        </div>
+                    </div>
+                    
+                    <div class="form-info">
+                        <strong>Полезная информация:</strong>
+                        <ul>
+                            <li>Все поля, отмеченные *, обязательны для заполнения</li>
+                            <li>Общая стоимость рассчитывается автоматически</li>
+                            <li>Статус "Ожидается" используется для планируемых поставок</li>
+                            <li>Статус меняется на "Доставлено" после получения товара</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-submit">
+                            <span style="margin-right: 8px;">✓</span> 
+                            {{if eq .mode "create"}}Создать поставку{{else}}Сохранить изменения{{end}}
+                        </button>
+                        <a href="/supplies" class="btn btn-cancel">
+                            <span style="margin-right: 8px;">←</span> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer">
+            © СкладPRO • Управление поставками
+        </div>
+    </div>
+
+    <script>
+        // Автофокус на первом поле
+        document.getElementById('supplier_id').focus();
+        
+        // Функция расчета общей стоимости
+        function calculateTotal() {
+            const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+            const price = parseFloat(document.getElementById('price').value) || 0;
+            const total = quantity * price;
+            
+            document.getElementById('totalAmount').textContent = total.toFixed(2);
+            
+            // Если получается NaN, показываем 0.00
+            if (isNaN(total)) {
+                document.getElementById('totalAmount').textContent = '0.00';
+            }
+        }
+        
+        // Обновляем расчет при изменении количества или цены
+        document.getElementById('quantity').addEventListener('input', calculateTotal);
+        document.getElementById('price').addEventListener('input', calculateTotal);
+        
+        // Инициализируем расчет при загрузке
+        document.addEventListener('DOMContentLoaded', calculateTotal);
+        
+        // Автозаполнение цены при выборе товара
+        document.getElementById('product_id').addEventListener('change', function() {
+            const productId = this.value;
+            if (productId) {
+                // Здесь можно добавить AJAX запрос для получения цены товара
+                // Пока что используем значение из атрибута data-price
+                const selectedOption = this.options[this.selectedIndex];
+                const productText = selectedOption.text;
+                
+                // Ищем цену в тексте опции (формат: "Название товара (цена ₽)")
+                const priceMatch = productText.match(/\(([\d.]+)\s*₽\)/);
+                if (priceMatch) {
+                    const productPrice = parseFloat(priceMatch[1]);
+                    if (!isNaN(productPrice)) {
+                        document.getElementById('price').value = productPrice.toFixed(2);
+                        calculateTotal();
+                    }
+                }
+            }
+        });
+        
+        // Валидация формы
+        const form = document.getElementById('supplyForm');
+        form.addEventListener('submit', function(e) {
+            const supplierId = document.getElementById('supplier_id').value;
+            const productId = document.getElementById('product_id').value;
+            const quantity = document.getElementById('quantity').value;
+            const price = document.getElementById('price').value;
+            const date = document.getElementById('date').value;
+            
+            // Проверка обязательных полей
+            if (!supplierId || !productId || !quantity || !price || !date) {
+                e.preventDefault();
+                alert('Пожалуйста, заполните все обязательные поля');
+                return;
+            }
+            
+            // Проверка числовых значений
+            if (parseInt(quantity) <= 0) {
+                e.preventDefault();
+                alert('Количество должно быть положительным числом');
+                document.getElementById('quantity').focus();
+                return;
+            }
+            
+            if (parseFloat(price) < 0) {
+                e.preventDefault();
+                alert('Цена не может быть отрицательной');
+                document.getElementById('price').focus();
+                return;
+            }
+            
+            // Показываем сообщение о сохранении
+            const submitBtn = form.querySelector('.btn-submit');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span style="margin-right: 8px;">⏳</span> Сохраняем...';
+            submitBtn.disabled = true;
+        });
+        
+        // Устанавливаем минимальную дату (сегодня)
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').setAttribute('min', today);
+    </script>
+</body>
+</html>

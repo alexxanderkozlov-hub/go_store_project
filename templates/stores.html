@@ -293,7 +293,7 @@
             <div class="sidebar-section">
                 <div class="section-title">НАВИГАТОР</div>
                 <ul class="nav-list">
-                    <li class="nav-item"><a href="/" class="nav-link active">Главная</a></li>
+                    <li class="nav-item"><a href="/main" class="nav-link active">Главная</a></li>
                     <li class="nav-item"><a href="/about" class="nav-link">О проекте</a></li>
                     <li class="nav-item"><a href="/contacts" class="nav-link">Контакты</a></li>
                 </ul>
@@ -306,7 +306,8 @@
                     <li class="nav-item"><a href="/suppliers" class="nav-link">Поставщики</a></li>
                     <li class="nav-item"><a href="/categories" class="nav-link">Категории товаров</a></li>
                     <li class="nav-item"><a href="/products" class="nav-link">Товары</a></li>
-                    <li class="nav-item"><a href="/deliveries" class="nav-link">Поставки</a></li>
+                    <!-- ИСПРАВЛЕНО: должно быть /supplies вместо /deliveries -->
+                    <li class="nav-item"><a href="/supplies" class="nav-link">Поставки</a></li>
                 </ul>
             </div>
         </div>
@@ -340,6 +341,12 @@
                     <a href="/products" class="main-btn">
                         <span class="btn-icon">📦</span>
                         <span class="btn-label">Товары</span>
+                    </a>
+                    
+                    <!-- ДОБАВЛЕНА КНОПКА ДЛЯ ПОСТАВОК -->
+                    <a href="/supplies" class="main-btn">
+                        <span class="btn-icon">📋</span>
+                        <span class="btn-label">Поставки</span>
                     </a>
                 </div>
             </div>
