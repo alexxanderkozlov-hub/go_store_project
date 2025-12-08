@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes" // ДОБАВЬТЕ ЭТОТ ИМПОРТ
 	"fmt"
 	"log"
 	"net/http"
@@ -40,7 +41,7 @@ type Product struct {
 	Description string    `json:"description"`
 	Photo       string    `json:"photo"`
 	CategoryID  int       `json:"category_id"`
-	SKU         string    `json:"sku"` // ДОБАВЛЕНО: поле для артикула
+	SKU         string    `json:"sku"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -61,10 +62,10 @@ type Supply struct {
 	SupplierID int       `json:"supplier_id"`
 	ProductID  int       `json:"product_id"`
 	Quantity   int       `json:"quantity"`
-	Price      float64   `json:"price"` // Цена за единицу при поставке
-	Total      float64   `json:"total"` // Общая стоимость = Quantity * Price
+	Price      float64   `json:"price"`
+	Total      float64   `json:"total"`
 	Date       time.Time `json:"date"`
-	Status     string    `json:"status"` // pending, delivered, cancelled
+	Status     string    `json:"status"`
 	Notes      string    `json:"notes"`
 	CreatedAt  time.Time `json:"created_at"`
 }
@@ -78,18 +79,17 @@ var (
 	suppliers  = make(map[int]Supplier)
 	products   = make(map[int]Product)
 	categories = make(map[int]Category)
-	supplies   = make(map[int]Supply) // ДОБАВЛЕНО: хранилище поставок
+	supplies   = make(map[int]Supply)
 	users      = make(map[int]User)
 	storeID    = 0
 	supplierID = 0
 	productID  = 0
 	categoryID = 0
-	supplyID   = 0 // ДОБАВЛЕНО: счетчик ID для поставок
+	supplyID   = 0
 	mu         sync.RWMutex
 )
 
 func init() {
-	// Инициализация для корректного поиска первого свободного ID
 	maxID := 0
 	for id := range stores {
 		if id > maxID {
@@ -100,24 +100,17 @@ func init() {
 }
 
 func main() {
-	// Настройка Gin
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// Загружаем HTML шаблоны
 	r.LoadHTMLGlob("templates/*.html")
-
-	// Статические файлы
 	r.Static("/static", "./static")
 
-	// Маршруты
 	setupRoutes(r)
 
-	// Запуск сервера
 	port := ":8080"
 	log.Printf("🚀 Сервер запущен на http://localhost%s", port)
 
-	// Пробуем разные порты если 8080 занят
 	err := r.Run(port)
 	if err != nil {
 		log.Printf("Порт 8080 занят, пробуем 8081...")
@@ -126,12 +119,10 @@ func main() {
 }
 
 func setupRoutes(r *gin.Engine) {
-	// Главная страница (редирект на логин)
 	r.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/login")
 	})
 
-	// Главное меню (stores.html)
 	r.GET("/main", mainMenuPage)
 
 	// Авторизация
@@ -139,7 +130,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/login", loginHandler)
 	r.GET("/logout", logoutHandler)
 
-	// Страница магазинов (store.html)
+	// Магазины
 	r.GET("/stores", storeListPage)
 	r.GET("/stores/create", storeCreatePage)
 	r.POST("/stores/create", storeCreateHandler)
@@ -147,7 +138,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/stores/:id/edit", storeUpdateHandler)
 	r.GET("/stores/:id/delete", storeDeleteHandler)
 
-	// Категории товаров (ПОЛНЫЙ CRUD)
+	// Категории
 	r.GET("/categories", categoriesListPage)
 	r.GET("/categories/create", categoryCreatePage)
 	r.POST("/categories/create", categoryCreateHandler)
@@ -163,7 +154,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/products/:id/edit", productUpdateHandler)
 	r.GET("/products/:id/delete", productDeleteHandler)
 
-	// ПОСТАВЩИКИ
+	// Поставщики
 	r.GET("/suppliers", suppliersPage)
 	r.GET("/suppliers/create", supplierCreatePage)
 	r.POST("/suppliers/create", supplierCreateHandler)
@@ -171,7 +162,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/suppliers/:id/edit", supplierUpdateHandler)
 	r.GET("/suppliers/:id/delete", supplierDeleteHandler)
 
-	// ПОСТАВКИ (ДОБАВЛЕНО)
+	// Поставки
 	r.GET("/supplies", suppliesPage)
 	r.GET("/supplies/create", supplyCreatePage)
 	r.POST("/supplies/create", supplyCreateHandler)
@@ -179,16 +170,433 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/supplies/:id/edit", supplyUpdateHandler)
 	r.GET("/supplies/:id/delete", supplyDeleteHandler)
 
+	// Экспорт данных - НОВЫЕ ОБРАБОТЧИКИ
+	r.GET("/export/txt", exportTXT)
+	r.GET("/export/csv", exportCSV)
+	r.GET("/export/excel", exportExcel)
+
 	// Статические страницы
 	r.GET("/about", aboutPage)
 	r.GET("/contacts", contactsPage)
 }
 
 // ====================================================================
-// ОБРАБОТЧИКИ КАТЕГОРИЙ
+// ЭКСПОРТ ДАННЫХ - НОВЫЕ ФУНКЦИИ
 // ====================================================================
 
-// Список категорий с сортировкой и поиском
+// Экспорт в TXT
+func exportTXT(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Получаем тип данных для экспорта
+	dataType := c.Query("type")
+	filename := "export.txt"
+
+	var content strings.Builder
+	content.WriteString("Экспорт данных системы\n")
+	content.WriteString("========================\n")
+	content.WriteString(fmt.Sprintf("Дата экспорта: %s\n\n", time.Now().Format("02.01.2006 15:04")))
+
+	mu.RLock()
+	defer mu.RUnlock()
+
+	switch dataType {
+	case "stores":
+		filename = "stores.txt"
+		content.WriteString("МАГАЗИНЫ\n")
+		content.WriteString("========\n")
+		for _, store := range stores {
+			content.WriteString(fmt.Sprintf("ID: %d\n", store.ID))
+			content.WriteString(fmt.Sprintf("Название: %s\n", store.Name))
+			content.WriteString(fmt.Sprintf("Адрес: %s\n", store.Address))
+			content.WriteString(fmt.Sprintf("Дата создания: %s\n", store.CreatedAt.Format("02.01.2006")))
+			content.WriteString("---\n")
+		}
+
+	case "products":
+		filename = "products.txt"
+		content.WriteString("ТОВАРЫ\n")
+		content.WriteString("======\n")
+		for _, product := range products {
+			categoryName := "Без категории"
+			if cat, exists := categories[product.CategoryID]; exists {
+				categoryName = cat.Name
+			}
+
+			content.WriteString(fmt.Sprintf("ID: %d\n", product.ID))
+			content.WriteString(fmt.Sprintf("Название: %s\n", product.Name))
+			content.WriteString(fmt.Sprintf("Артикул: %s\n", product.SKU))
+			content.WriteString(fmt.Sprintf("Цена: %.2f руб.\n", product.Price))
+			content.WriteString(fmt.Sprintf("Описание: %s\n", product.Description))
+			content.WriteString(fmt.Sprintf("Категория: %s\n", categoryName))
+			content.WriteString(fmt.Sprintf("Дата создания: %s\n", product.CreatedAt.Format("02.01.2006")))
+			content.WriteString("---\n")
+		}
+
+	case "suppliers":
+		filename = "suppliers.txt"
+		content.WriteString("ПОСТАВЩИКИ\n")
+		content.WriteString("==========\n")
+		for _, supplier := range suppliers {
+			content.WriteString(fmt.Sprintf("ID: %d\n", supplier.ID))
+			content.WriteString(fmt.Sprintf("Название: %s\n", supplier.Name))
+			content.WriteString(fmt.Sprintf("Телефон: %s\n", supplier.Phone))
+			content.WriteString(fmt.Sprintf("Email: %s\n", supplier.Email))
+			content.WriteString(fmt.Sprintf("Адрес: %s\n", supplier.Address))
+			content.WriteString("---\n")
+		}
+
+	case "supplies":
+		filename = "supplies.txt"
+		content.WriteString("ПОСТАВКИ\n")
+		content.WriteString("========\n")
+		for _, supply := range supplies {
+			supplierName := "Неизвестный"
+			if sup, exists := suppliers[supply.SupplierID]; exists {
+				supplierName = sup.Name
+			}
+
+			productName := "Неизвестный"
+			if prod, exists := products[supply.ProductID]; exists {
+				productName = prod.Name
+			}
+
+			content.WriteString(fmt.Sprintf("ID поставки: %d\n", supply.ID))
+			content.WriteString(fmt.Sprintf("Поставщик: %s\n", supplierName))
+			content.WriteString(fmt.Sprintf("Товар: %s\n", productName))
+			content.WriteString(fmt.Sprintf("Количество: %d\n", supply.Quantity))
+			content.WriteString(fmt.Sprintf("Цена за ед.: %.2f руб.\n", supply.Price))
+			content.WriteString(fmt.Sprintf("Итого: %.2f руб.\n", supply.Total))
+			content.WriteString(fmt.Sprintf("Дата: %s\n", supply.Date.Format("02.01.2006")))
+			content.WriteString(fmt.Sprintf("Статус: %s\n", getStatusText(supply.Status)))
+			content.WriteString(fmt.Sprintf("Примечания: %s\n", supply.Notes))
+			content.WriteString("---\n")
+		}
+
+	case "categories":
+		filename = "categories.txt"
+		content.WriteString("КАТЕГОРИИ\n")
+		content.WriteString("=========\n")
+		for _, category := range categories {
+			content.WriteString(fmt.Sprintf("ID: %d\n", category.ID))
+			content.WriteString(fmt.Sprintf("Название: %s\n", category.Name))
+			content.WriteString(fmt.Sprintf("Описание: %s\n", category.Description))
+			content.WriteString("---\n")
+		}
+
+	default:
+		// Экспорт всего
+		filename = "full_export.txt"
+		// Экспорт магазинов
+		content.WriteString("МАГАЗИНЫ\n")
+		content.WriteString("========\n")
+		for _, store := range stores {
+			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Адрес: %s\n",
+				store.ID, store.Name, store.Address))
+		}
+		content.WriteString("\n")
+
+		// Экспорт категорий
+		content.WriteString("КАТЕГОРИИ\n")
+		content.WriteString("=========\n")
+		for _, category := range categories {
+			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Описание: %s\n",
+				category.ID, category.Name, category.Description))
+		}
+		content.WriteString("\n")
+
+		// Экспорт товаров
+		content.WriteString("ТОВАРЫ\n")
+		content.WriteString("======\n")
+		for _, product := range products {
+			categoryName := "Без категории"
+			if cat, exists := categories[product.CategoryID]; exists {
+				categoryName = cat.Name
+			}
+			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Цена: %.2f | Артикул: %s | Категория: %s\n",
+				product.ID, product.Name, product.Price, product.SKU, categoryName))
+		}
+		content.WriteString("\n")
+
+		// Экспорт поставщиков
+		content.WriteString("ПОСТАВЩИКИ\n")
+		content.WriteString("==========\n")
+		for _, supplier := range suppliers {
+			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Телефон: %s | Email: %s\n",
+				supplier.ID, supplier.Name, supplier.Phone, supplier.Email))
+		}
+		content.WriteString("\n")
+
+		// Экспорт поставок
+		content.WriteString("ПОСТАВКИ\n")
+		content.WriteString("========\n")
+		for _, supply := range supplies {
+			supplierName := "Неизвестный"
+			if sup, exists := suppliers[supply.SupplierID]; exists {
+				supplierName = sup.Name
+			}
+
+			productName := "Неизвестный"
+			if prod, exists := products[supply.ProductID]; exists {
+				productName = prod.Name
+			}
+
+			content.WriteString(fmt.Sprintf("ID: %d | Поставщик: %s | Товар: %s | Количество: %d | Итого: %.2f | Статус: %s\n",
+				supply.ID, supplierName, productName, supply.Quantity, supply.Total, getStatusText(supply.Status)))
+		}
+	}
+
+	// Устанавливаем заголовки для скачивания файла
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	c.String(http.StatusOK, content.String())
+}
+
+// Экспорт в CSV (Excel) - ИСПРАВЛЕННАЯ ВЕРСИЯ
+func exportCSV(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Получаем тип данных для экспорта
+	dataType := c.Query("type")
+	filename := "export.csv"
+
+	mu.RLock()
+	defer mu.RUnlock()
+
+	// Определяем имя файла
+	switch dataType {
+	case "stores":
+		filename = "stores.csv"
+	case "products":
+		filename = "products.csv"
+	case "suppliers":
+		filename = "suppliers.csv"
+	case "supplies":
+		filename = "supplies.csv"
+	case "categories":
+		filename = "categories.csv"
+	default:
+		filename = "full_export.csv"
+	}
+
+	// Создаем буфер для данных
+	var content bytes.Buffer
+
+	// Записываем BOM (Byte Order Mark) для UTF-8 - ВАЖНО для Excel!
+	content.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	switch dataType {
+	case "stores":
+		// Заголовки для магазинов
+		content.WriteString("ID;Название;Адрес;Дата создания\r\n")
+		for _, store := range stores {
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%s\r\n",
+				store.ID,
+				escapeCSV(store.Name),
+				escapeCSV(store.Address),
+				store.CreatedAt.Format("02.01.2006"),
+			))
+		}
+
+	case "products":
+		// Заголовки для товаров
+		content.WriteString("ID;Название;Артикул;Цена;Описание;Категория;Дата создания\r\n")
+		for _, product := range products {
+			categoryName := "Без категории"
+			if cat, exists := categories[product.CategoryID]; exists {
+				categoryName = cat.Name
+			}
+
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%.2f;%s;%s;%s\r\n",
+				product.ID,
+				escapeCSV(product.Name),
+				escapeCSV(product.SKU),
+				product.Price,
+				escapeCSV(product.Description),
+				escapeCSV(categoryName),
+				product.CreatedAt.Format("02.01.2006"),
+			))
+		}
+
+	case "suppliers":
+		// Заголовки для поставщиков
+		content.WriteString("ID;Название;Телефон;Email;Адрес\r\n")
+		for _, supplier := range suppliers {
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%s;%s\r\n",
+				supplier.ID,
+				escapeCSV(supplier.Name),
+				escapeCSV(supplier.Phone),
+				escapeCSV(supplier.Email),
+				escapeCSV(supplier.Address),
+			))
+		}
+
+	case "supplies":
+		// Заголовки для поставок
+		content.WriteString("ID;Поставщик;Товар;Количество;Цена за ед.;Итого;Дата;Статус;Примечания\r\n")
+		for _, supply := range supplies {
+			supplierName := "Неизвестный"
+			if sup, exists := suppliers[supply.SupplierID]; exists {
+				supplierName = sup.Name
+			}
+
+			productName := "Неизвестный"
+			if prod, exists := products[supply.ProductID]; exists {
+				productName = prod.Name
+			}
+
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%d;%.2f;%.2f;%s;%s;%s\r\n",
+				supply.ID,
+				escapeCSV(supplierName),
+				escapeCSV(productName),
+				supply.Quantity,
+				supply.Price,
+				supply.Total,
+				supply.Date.Format("02.01.2006"),
+				escapeCSV(getStatusText(supply.Status)),
+				escapeCSV(supply.Notes),
+			))
+		}
+
+	case "categories":
+		// Заголовки для категорий
+		content.WriteString("ID;Название;Описание\r\n")
+		for _, category := range categories {
+			content.WriteString(fmt.Sprintf("%d;%s;%s\r\n",
+				category.ID,
+				escapeCSV(category.Name),
+				escapeCSV(category.Description),
+			))
+		}
+
+	default:
+		// Экспорт всего в один файл
+		content.WriteString("=== МАГАЗИНЫ ===\r\n")
+		content.WriteString("ID;Название;Адрес;Дата создания\r\n")
+		for _, store := range stores {
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%s\r\n",
+				store.ID,
+				escapeCSV(store.Name),
+				escapeCSV(store.Address),
+				store.CreatedAt.Format("02.01.2006"),
+			))
+		}
+
+		content.WriteString("\r\n=== КАТЕГОРИИ ===\r\n")
+		content.WriteString("ID;Название;Описание\r\n")
+		for _, category := range categories {
+			content.WriteString(fmt.Sprintf("%d;%s;%s\r\n",
+				category.ID,
+				escapeCSV(category.Name),
+				escapeCSV(category.Description),
+			))
+		}
+
+		content.WriteString("\r\n=== ТОВАРЫ ===\r\n")
+		content.WriteString("ID;Название;Артикул;Цена;Описание;Категория\r\n")
+		for _, product := range products {
+			categoryName := "Без категории"
+			if cat, exists := categories[product.CategoryID]; exists {
+				categoryName = cat.Name
+			}
+
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%.2f;%s;%s\r\n",
+				product.ID,
+				escapeCSV(product.Name),
+				escapeCSV(product.SKU),
+				product.Price,
+				escapeCSV(product.Description),
+				escapeCSV(categoryName),
+			))
+		}
+
+		content.WriteString("\r\n=== ПОСТАВЩИКИ ===\r\n")
+		content.WriteString("ID;Название;Телефон;Email;Адрес\r\n")
+		for _, supplier := range suppliers {
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%s;%s\r\n",
+				supplier.ID,
+				escapeCSV(supplier.Name),
+				escapeCSV(supplier.Phone),
+				escapeCSV(supplier.Email),
+				escapeCSV(supplier.Address),
+			))
+		}
+
+		content.WriteString("\r\n=== ПОСТАВКИ ===\r\n")
+		content.WriteString("ID;Поставщик;Товар;Количество;Цена за ед.;Итого;Дата;Статус\r\n")
+		for _, supply := range supplies {
+			supplierName := "Неизвестный"
+			if sup, exists := suppliers[supply.SupplierID]; exists {
+				supplierName = sup.Name
+			}
+
+			productName := "Неизвестный"
+			if prod, exists := products[supply.ProductID]; exists {
+				productName = prod.Name
+			}
+
+			content.WriteString(fmt.Sprintf("%d;%s;%s;%d;%.2f;%.2f;%s;%s\r\n",
+				supply.ID,
+				escapeCSV(supplierName),
+				escapeCSV(productName),
+				supply.Quantity,
+				supply.Price,
+				supply.Total,
+				supply.Date.Format("02.01.2006"),
+				escapeCSV(getStatusText(supply.Status)),
+			))
+		}
+	}
+
+	// Устанавливаем заголовки
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	// Отправляем данные
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", content.Bytes())
+}
+
+// Функция для экранирования CSV значений
+func escapeCSV(value string) string {
+	// Заменяем точку с запятой на запятую и удаляем переносы строк
+	result := strings.ReplaceAll(value, ";", ",")
+	result = strings.ReplaceAll(result, "\r\n", " ")
+	result = strings.ReplaceAll(result, "\n", " ")
+	result = strings.ReplaceAll(result, "\r", " ")
+	return result
+}
+
+// Экспорт в Excel - используем реальный Excel файл
+func exportExcel(c *gin.Context) {
+	if !checkAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	// Просто вызываем тот же CSV, но с другим именем файла
+	// Excel откроет CSV если он правильно сформирован
+	dataType := c.Query("type")
+	filename := "export.xlsx"
+
+	// Меняем заголовки, чтобы Excel знал что это CSV
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	// Редирект на CSV функцию
+	c.Redirect(http.StatusFound, fmt.Sprintf("/export/csv?type=%s", dataType))
+}
+
+// ====================================================================
+// ОСТАВШИЙСЯ КОД (без изменений)
+// ====================================================================
+
+// ОБРАБОТЧИКИ КАТЕГОРИЙ
 func categoriesListPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -202,12 +610,10 @@ func categoriesListPage(c *gin.Context) {
 	}
 	mu.RUnlock()
 
-	// Получаем параметры сортировки и поиска
 	sortBy := c.DefaultQuery("sort", "id")
 	direction := c.DefaultQuery("direction", "asc")
 	searchQuery := c.Query("search")
 
-	// Фильтрация по поиску
 	if searchQuery != "" {
 		filteredList := make([]Category, 0)
 		searchLower := strings.ToLower(searchQuery)
@@ -220,7 +626,6 @@ func categoriesListPage(c *gin.Context) {
 		categoryList = filteredList
 	}
 
-	// Сортируем категории
 	sortCategories(categoryList, sortBy, direction)
 
 	c.HTML(http.StatusOK, "categories.html", gin.H{
@@ -233,7 +638,6 @@ func categoriesListPage(c *gin.Context) {
 	})
 }
 
-// Функция сортировки категорий
 func sortCategories(categories []Category, sortBy, direction string) {
 	switch sortBy {
 	case "id":
@@ -259,14 +663,12 @@ func sortCategories(categories []Category, sortBy, direction string) {
 	}
 }
 
-// Страница создания категории
 func categoryCreatePage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
 
-	// Создаем пустую категорию для формы
 	category := Category{}
 
 	c.HTML(http.StatusOK, "category_form.html", gin.H{
@@ -276,7 +678,6 @@ func categoryCreatePage(c *gin.Context) {
 	})
 }
 
-// Обработчик сохранения категории
 func categoryCreateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -301,7 +702,6 @@ func categoryCreateHandler(c *gin.Context) {
 
 	mu.Lock()
 
-	// Находим первый свободный ID
 	newID := 1
 	for {
 		if _, exists := categories[newID]; !exists {
@@ -325,7 +725,6 @@ func categoryCreateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/categories")
 }
 
-// Редактирование категории
 func categoryEditPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -354,7 +753,6 @@ func categoryEditPage(c *gin.Context) {
 	})
 }
 
-// Обновление категории
 func categoryUpdateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -400,7 +798,6 @@ func categoryUpdateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/categories")
 }
 
-// Удаление категории
 func categoryDeleteHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -420,10 +817,7 @@ func categoryDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/categories")
 }
 
-// ====================================================================
 // АВТОРИЗАЦИЯ
-// ====================================================================
-
 func loginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{})
 }
@@ -432,9 +826,7 @@ func loginHandler(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
-	// Проверка учетных данных
 	if username == "admin" && password == "admin123" {
-		// Устанавливаем сессию
 		c.SetCookie("auth", "true", 3600, "/", "", false, true)
 		c.SetCookie("username", username, 3600, "/", "", false, false)
 		c.Redirect(http.StatusFound, "/main")
@@ -456,10 +848,7 @@ func checkAuth(c *gin.Context) bool {
 	return err == nil && auth == "true"
 }
 
-// ====================================================================
 // ГЛАВНОЕ МЕНЮ
-// ====================================================================
-
 func mainMenuPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -478,10 +867,7 @@ func getUsername(c *gin.Context) string {
 	return username
 }
 
-// ====================================================================
 // ПОСТАВЩИКИ
-// ====================================================================
-
 func suppliersPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -495,11 +881,8 @@ func suppliersPage(c *gin.Context) {
 	}
 	mu.RUnlock()
 
-	// Получаем параметры сортировки
 	sortBy := c.DefaultQuery("sort", "id")
 	direction := c.DefaultQuery("direction", "asc")
-
-	// Фильтрация по поиску
 	searchQuery := c.Query("search")
 	if searchQuery != "" {
 		filteredList := make([]Supplier, 0)
@@ -515,7 +898,6 @@ func suppliersPage(c *gin.Context) {
 		supplierList = filteredList
 	}
 
-	// Сортируем поставщиков
 	sortSuppliers(supplierList, sortBy, direction)
 
 	c.HTML(http.StatusOK, "suppliers.html", gin.H{
@@ -528,7 +910,6 @@ func suppliersPage(c *gin.Context) {
 	})
 }
 
-// Функция сортировки поставщиков
 func sortSuppliers(suppliers []Supplier, sortBy, direction string) {
 	switch sortBy {
 	case "id":
@@ -604,7 +985,6 @@ func supplierCreateHandler(c *gin.Context) {
 
 	mu.Lock()
 
-	// Находим первый свободный ID
 	newID := 1
 	for {
 		if _, exists := suppliers[newID]; !exists {
@@ -621,7 +1001,6 @@ func supplierCreateHandler(c *gin.Context) {
 		Address: address,
 	}
 
-	// Обновляем supplierID если новый ID больше
 	if newID > supplierID {
 		supplierID = newID
 	}
@@ -679,7 +1058,6 @@ func supplierUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	// Обновляем данные
 	supplier.Name = c.PostForm("name")
 	supplier.Phone = c.PostForm("phone")
 	supplier.Email = c.PostForm("email")
@@ -710,10 +1088,7 @@ func supplierDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/suppliers")
 }
 
-// ====================================================================
 // СТРАНИЦА МАГАЗИНОВ
-// ====================================================================
-
 func storeListPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -727,11 +1102,9 @@ func storeListPage(c *gin.Context) {
 	}
 	mu.RUnlock()
 
-	// Получаем параметры сортировки
-	sortBy := c.DefaultQuery("sort", "id") // по умолчанию сортируем по ID
+	sortBy := c.DefaultQuery("sort", "id")
 	direction := c.DefaultQuery("direction", "asc")
 
-	// Сортируем список
 	sortStores(storeList, sortBy, direction)
 
 	c.HTML(http.StatusOK, "store.html", gin.H{
@@ -742,7 +1115,6 @@ func storeListPage(c *gin.Context) {
 	})
 }
 
-// Функция сортировки магазинов
 func sortStores(stores []Store, sortBy, direction string) {
 	switch sortBy {
 	case "id":
@@ -811,7 +1183,6 @@ func storeCreateHandler(c *gin.Context) {
 
 	mu.Lock()
 
-	// Находим первый свободный ID (1, 2, 3...)
 	newID := 1
 	for {
 		if _, exists := stores[newID]; !exists {
@@ -827,7 +1198,6 @@ func storeCreateHandler(c *gin.Context) {
 		CreatedAt: time.Now(),
 	}
 
-	// Обновляем storeID если новый ID больше
 	if newID > storeID {
 		storeID = newID
 	}
@@ -912,10 +1282,7 @@ func storeDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/stores")
 }
 
-// ====================================================================
-// ТОВАРЫ (ПОЛНЫЙ CRUD)
-// ====================================================================
-
+// ТОВАРЫ
 func productsList(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -929,29 +1296,25 @@ func productsList(c *gin.Context) {
 	}
 	mu.RUnlock()
 
-	// Получаем параметры сортировки и поиска
 	sortBy := c.DefaultQuery("sort", "id")
 	direction := c.DefaultQuery("direction", "asc")
 	searchQuery := c.Query("search")
 
-	// Фильтрация по поиску
 	if searchQuery != "" {
 		filteredList := make([]Product, 0)
 		searchLower := strings.ToLower(searchQuery)
 		for _, product := range productList {
 			if strings.Contains(strings.ToLower(product.Name), searchLower) ||
 				strings.Contains(strings.ToLower(product.Description), searchLower) ||
-				strings.Contains(strings.ToLower(product.SKU), searchLower) { // ДОБАВЛЕНО: поиск по артикулу
+				strings.Contains(strings.ToLower(product.SKU), searchLower) {
 				filteredList = append(filteredList, product)
 			}
 		}
 		productList = filteredList
 	}
 
-	// Сортируем товары
 	sortProducts(productList, sortBy, direction)
 
-	// Рассчитываем статистику
 	var totalPrice float64
 	var minPrice, maxPrice float64
 	if len(productList) > 0 {
@@ -988,7 +1351,6 @@ func productsList(c *gin.Context) {
 	})
 }
 
-// Функция сортировки товаров
 func sortProducts(products []Product, sortBy, direction string) {
 	switch sortBy {
 	case "id":
@@ -1021,7 +1383,7 @@ func sortProducts(products []Product, sortBy, direction string) {
 				return products[i].Price > products[j].Price
 			})
 		}
-	case "sku": // ДОБАВЛЕНО: сортировка по артикулу
+	case "sku":
 		if direction == "asc" {
 			sort.Slice(products, func(i, j int) bool {
 				return strings.ToLower(products[i].SKU) < strings.ToLower(products[j].SKU)
@@ -1034,14 +1396,12 @@ func sortProducts(products []Product, sortBy, direction string) {
 	}
 }
 
-// Страница создания товара
 func productCreatePage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
 
-	// Получаем список категорий для выпадающего списка
 	mu.RLock()
 	categoryList := make([]Category, 0, len(categories))
 	for _, cat := range categories {
@@ -1058,7 +1418,6 @@ func productCreatePage(c *gin.Context) {
 	})
 }
 
-// Обработчик создания товара
 func productCreateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1068,10 +1427,9 @@ func productCreateHandler(c *gin.Context) {
 	name := c.PostForm("name")
 	priceStr := c.PostForm("price")
 	description := c.PostForm("description")
-	sku := c.PostForm("sku") // ДОБАВЛЕНО: получаем артикул
+	sku := c.PostForm("sku")
 	categoryIDStr := c.PostForm("category_id")
 
-	// Валидация
 	if name == "" || priceStr == "" {
 		mu.RLock()
 		categoryList := make([]Category, 0, len(categories))
@@ -1087,7 +1445,7 @@ func productCreateHandler(c *gin.Context) {
 			"product": Product{
 				Name:        name,
 				Description: description,
-				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
+				SKU:         sku,
 			},
 			"categories": categoryList,
 			"mode":       "create",
@@ -1111,7 +1469,7 @@ func productCreateHandler(c *gin.Context) {
 			"product": Product{
 				Name:        name,
 				Description: description,
-				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
+				SKU:         sku,
 			},
 			"categories": categoryList,
 			"mode":       "create",
@@ -1119,7 +1477,6 @@ func productCreateHandler(c *gin.Context) {
 		return
 	}
 
-	// Преобразуем category_id в int
 	var categoryID int
 	if categoryIDStr != "" {
 		if id, err := strconv.Atoi(categoryIDStr); err == nil {
@@ -1129,7 +1486,6 @@ func productCreateHandler(c *gin.Context) {
 
 	mu.Lock()
 
-	// Находим первый свободный ID
 	newID := 1
 	for {
 		if _, exists := products[newID]; !exists {
@@ -1143,7 +1499,7 @@ func productCreateHandler(c *gin.Context) {
 		Name:        name,
 		Price:       price,
 		Description: description,
-		SKU:         sku, // ДОБАВЛЕНО: сохраняем артикул
+		SKU:         sku,
 		CategoryID:  categoryID,
 		CreatedAt:   time.Now(),
 	}
@@ -1157,7 +1513,6 @@ func productCreateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/products")
 }
 
-// Страница редактирования товара
 func productEditPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1173,7 +1528,6 @@ func productEditPage(c *gin.Context) {
 	mu.RLock()
 	product, exists := products[id]
 
-	// Получаем список категорий
 	categoryList := make([]Category, 0, len(categories))
 	for _, cat := range categories {
 		categoryList = append(categoryList, cat)
@@ -1194,7 +1548,6 @@ func productEditPage(c *gin.Context) {
 	})
 }
 
-// Обработчик обновления товара
 func productUpdateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1210,10 +1563,9 @@ func productUpdateHandler(c *gin.Context) {
 	name := c.PostForm("name")
 	priceStr := c.PostForm("price")
 	description := c.PostForm("description")
-	sku := c.PostForm("sku") // ДОБАВЛЕНО: получаем артикул
+	sku := c.PostForm("sku")
 	categoryIDStr := c.PostForm("category_id")
 
-	// Валидация
 	if name == "" || priceStr == "" {
 		mu.RLock()
 		categoryList := make([]Category, 0, len(categories))
@@ -1230,7 +1582,7 @@ func productUpdateHandler(c *gin.Context) {
 				ID:          id,
 				Name:        name,
 				Description: description,
-				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
+				SKU:         sku,
 			},
 			"categories": categoryList,
 			"mode":       "edit",
@@ -1255,7 +1607,7 @@ func productUpdateHandler(c *gin.Context) {
 				ID:          id,
 				Name:        name,
 				Description: description,
-				SKU:         sku, // ДОБАВЛЕНО: передаем SKU обратно в форму
+				SKU:         sku,
 			},
 			"categories": categoryList,
 			"mode":       "edit",
@@ -1263,7 +1615,6 @@ func productUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	// Преобразуем category_id в int
 	var categoryID int
 	if categoryIDStr != "" {
 		if id, err := strconv.Atoi(categoryIDStr); err == nil {
@@ -1279,11 +1630,10 @@ func productUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	// Обновляем данные
 	product.Name = name
 	product.Price = price
 	product.Description = description
-	product.SKU = sku // ДОБАВЛЕНО: обновляем артикул
+	product.SKU = sku
 	product.CategoryID = categoryID
 
 	products[id] = product
@@ -1292,7 +1642,6 @@ func productUpdateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/products")
 }
 
-// Удаление товара
 func productDeleteHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1312,11 +1661,7 @@ func productDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/products")
 }
 
-// ====================================================================
-// ПОСТАВКИ (ПОЛНЫЙ CRUD)
-// ====================================================================
-
-// Список поставок с сортировкой и поиском
+// ПОСТАВКИ
 func suppliesPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1329,7 +1674,6 @@ func suppliesPage(c *gin.Context) {
 		supplyList = append(supplyList, supply)
 	}
 
-	// Получаем данные поставщиков и товаров для отображения
 	supplierMap := make(map[int]Supplier)
 	for id, supplier := range suppliers {
 		supplierMap[id] = supplier
@@ -1341,24 +1685,20 @@ func suppliesPage(c *gin.Context) {
 	}
 	mu.RUnlock()
 
-	// Получаем параметры сортировки и поиска
 	sortBy := c.DefaultQuery("sort", "id")
 	direction := c.DefaultQuery("direction", "asc")
 	searchQuery := c.Query("search")
 	statusFilter := c.Query("status")
 
-	// Фильтрация по поиску и статусу
 	if searchQuery != "" || statusFilter != "" {
 		filteredList := make([]Supply, 0)
 		searchLower := strings.ToLower(searchQuery)
 
 		for _, supply := range supplyList {
-			// Фильтрация по статусу
 			if statusFilter != "" && supply.Status != statusFilter {
 				continue
 			}
 
-			// Фильтрация по поиску
 			if searchQuery != "" {
 				supplier := supplierMap[supply.SupplierID]
 				product := productMap[supply.ProductID]
@@ -1375,10 +1715,8 @@ func suppliesPage(c *gin.Context) {
 		supplyList = filteredList
 	}
 
-	// Сортируем поставки
 	sortSupplies(supplyList, sortBy, direction)
 
-	// Рассчитываем статистику
 	var totalQuantity int
 	var totalCost float64
 	for _, s := range supplyList {
@@ -1386,7 +1724,6 @@ func suppliesPage(c *gin.Context) {
 		totalCost += s.Total
 	}
 
-	// Подготавливаем данные для шаблона
 	supplyData := make([]gin.H, 0, len(supplyList))
 	for _, supply := range supplyList {
 		supplier := supplierMap[supply.SupplierID]
@@ -1423,7 +1760,6 @@ func suppliesPage(c *gin.Context) {
 	})
 }
 
-// Функция сортировки поставок
 func sortSupplies(supplies []Supply, sortBy, direction string) {
 	switch sortBy {
 	case "id":
@@ -1469,7 +1805,6 @@ func sortSupplies(supplies []Supply, sortBy, direction string) {
 	}
 }
 
-// Функции для статусов
 func getStatusText(status string) string {
 	switch status {
 	case "pending":
@@ -1496,7 +1831,6 @@ func getStatusClass(status string) string {
 	}
 }
 
-// Страница создания поставки
 func supplyCreatePage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1504,7 +1838,6 @@ func supplyCreatePage(c *gin.Context) {
 	}
 
 	mu.RLock()
-	// Получаем списки поставщиков и товаров
 	supplierList := make([]Supplier, 0, len(suppliers))
 	for _, supplier := range suppliers {
 		supplierList = append(supplierList, supplier)
@@ -1523,11 +1856,10 @@ func supplyCreatePage(c *gin.Context) {
 		"suppliers": supplierList,
 		"products":  productList,
 		"mode":      "create",
-		"now":       time.Now(), // ДОБАВЛЕНО: передаем текущее время в шаблон
+		"now":       time.Now(),
 	})
 }
 
-// Обработчик создания поставки
 func supplyCreateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1542,7 +1874,6 @@ func supplyCreateHandler(c *gin.Context) {
 	status := c.PostForm("status")
 	notes := c.PostForm("notes")
 
-	// Валидация
 	if supplierIDStr == "" || productIDStr == "" || quantityStr == "" || priceStr == "" {
 		mu.RLock()
 		supplierList := make([]Supplier, 0, len(suppliers))
@@ -1567,12 +1898,11 @@ func supplyCreateHandler(c *gin.Context) {
 			"suppliers": supplierList,
 			"products":  productList,
 			"mode":      "create",
-			"now":       time.Now(), // ДОБАВЛЕНО
+			"now":       time.Now(),
 		})
 		return
 	}
 
-	// Парсинг данных
 	supplierID, err1 := strconv.Atoi(supplierIDStr)
 	productID, err2 := strconv.Atoi(productIDStr)
 	quantity, err3 := strconv.Atoi(quantityStr)
@@ -1602,12 +1932,11 @@ func supplyCreateHandler(c *gin.Context) {
 			"suppliers": supplierList,
 			"products":  productList,
 			"mode":      "create",
-			"now":       time.Now(), // ДОБАВЛЕНО
+			"now":       time.Now(),
 		})
 		return
 	}
 
-	// Парсинг даты
 	var date time.Time
 	if dateStr != "" {
 		date, _ = time.Parse("2006-01-02", dateStr)
@@ -1615,12 +1944,10 @@ func supplyCreateHandler(c *gin.Context) {
 		date = time.Now()
 	}
 
-	// Расчет общей стоимости
 	total := float64(quantity) * price
 
 	mu.Lock()
 
-	// Находим первый свободный ID
 	newID := 1
 	for {
 		if _, exists := supplies[newID]; !exists {
@@ -1651,7 +1978,6 @@ func supplyCreateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/supplies")
 }
 
-// Страница редактирования поставки
 func supplyEditPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1667,7 +1993,6 @@ func supplyEditPage(c *gin.Context) {
 	mu.RLock()
 	supply, exists := supplies[id]
 
-	// Получаем списки поставщиков и товаров
 	supplierList := make([]Supplier, 0, len(suppliers))
 	for _, supplier := range suppliers {
 		supplierList = append(supplierList, supplier)
@@ -1691,11 +2016,10 @@ func supplyEditPage(c *gin.Context) {
 		"suppliers": supplierList,
 		"products":  productList,
 		"mode":      "edit",
-		"now":       time.Now(), // ДОБАВЛЕНО
+		"now":       time.Now(),
 	})
 }
 
-// Обработчик обновления поставки
 func supplyUpdateHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1716,7 +2040,6 @@ func supplyUpdateHandler(c *gin.Context) {
 	status := c.PostForm("status")
 	notes := c.PostForm("notes")
 
-	// Валидация
 	if supplierIDStr == "" || productIDStr == "" || quantityStr == "" || priceStr == "" {
 		mu.RLock()
 		supplierList := make([]Supplier, 0, len(suppliers))
@@ -1742,12 +2065,11 @@ func supplyUpdateHandler(c *gin.Context) {
 			"suppliers": supplierList,
 			"products":  productList,
 			"mode":      "edit",
-			"now":       time.Now(), // ДОБАВЛЕНО
+			"now":       time.Now(),
 		})
 		return
 	}
 
-	// Парсинг данных
 	supplierID, err1 := strconv.Atoi(supplierIDStr)
 	productID, err2 := strconv.Atoi(productIDStr)
 	quantity, err3 := strconv.Atoi(quantityStr)
@@ -1778,12 +2100,11 @@ func supplyUpdateHandler(c *gin.Context) {
 			"suppliers": supplierList,
 			"products":  productList,
 			"mode":      "edit",
-			"now":       time.Now(), // ДОБАВЛЕНО
+			"now":       time.Now(),
 		})
 		return
 	}
 
-	// Парсинг даты
 	var date time.Time
 	if dateStr != "" {
 		date, _ = time.Parse("2006-01-02", dateStr)
@@ -1791,7 +2112,6 @@ func supplyUpdateHandler(c *gin.Context) {
 		date = time.Now()
 	}
 
-	// Расчет общей стоимости
 	total := float64(quantity) * price
 
 	mu.Lock()
@@ -1802,7 +2122,6 @@ func supplyUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	// Обновляем данные
 	supply.SupplierID = supplierID
 	supply.ProductID = productID
 	supply.Quantity = quantity
@@ -1818,7 +2137,6 @@ func supplyUpdateHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/supplies")
 }
 
-// Удаление поставки
 func supplyDeleteHandler(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -1838,9 +2156,7 @@ func supplyDeleteHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/supplies")
 }
 
-// ====================================================================
 // СТАТИЧЕСКИЕ СТРАНИЦЫ
-// ====================================================================
 func aboutPage(c *gin.Context) {
 	if !checkAuth(c) {
 		c.Redirect(http.StatusFound, "/login")

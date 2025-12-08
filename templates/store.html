@@ -109,6 +109,7 @@
             display: flex;
             gap: 15px;
             margin-bottom: 25px;
+            flex-wrap: wrap;
         }
         
         .top-btn {
@@ -124,12 +125,21 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            text-decoration: none;
         }
         
         .top-btn:hover {
             background: #2980b9;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
         }
         
         /* Таблица с вертикальными линиями */
@@ -246,7 +256,6 @@
         
         .back-btn:hover {
             background: #2980b9;
-            /* Убрано движение при наведении */
             transform: none;
             box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
@@ -268,11 +277,31 @@
         .download-icon {
             font-size: 16px;
         }
+        
+        /* Счетчик магазинов */
+        .store-count {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+        }
+        
+        .store-count strong {
+            color: #3498db;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="page-title">Список магазинов</h1>
+        
+        <!-- Счетчик магазинов -->
+        <div class="store-count">
+            Всего магазинов: <strong>{{.total_count}}</strong>
+        </div>
         
         <!-- Фильтры -->
         <div class="filters">
@@ -283,6 +312,7 @@
                         <option value="">Без сортировки</option>
                         <option value="id" {{if eq .sort_by "id"}}selected{{end}}>ID</option>
                         <option value="name" {{if eq .sort_by "name"}}selected{{end}}>Названию</option>
+                        <option value="created_at" {{if eq .sort_by "created_at"}}selected{{end}}>Дате создания</option>
                     </select>
                 </div>
                 
@@ -306,12 +336,12 @@
             <button class="top-btn" onclick="window.location.href='/stores/create'">
                 <span style="font-size: 18px;">+</span> Добавить магазин
             </button>
-            <button class="top-btn" onclick="alert('Функция скачивания TXT')">
-                <span class="download-icon">📥</span> Скачать TXT
-            </button>
-            <button class="top-btn" onclick="alert('Функция скачивания XLSX')">
+            <a href="/export/txt?type=stores" class="top-btn">
+                <span class="download-icon">📄</span> Скачать TXT
+            </a>
+            <a href="/export/csv?type=stores" class="top-btn btn-success">
                 <span class="download-icon">📊</span> Скачать XLSX
-            </button>
+            </a>
         </div>
         
         <!-- Таблица -->
@@ -321,6 +351,7 @@
                     <th>ID</th>
                     <th>Название</th>
                     <th>Адрес</th>
+                    <th>Дата создания</th>
                     <th class="logo-cell">Логотип</th>
                     <th class="actions-cell">Действия</th>
                 </tr>
@@ -331,6 +362,7 @@
                     <td>{{.ID}}</td>
                     <td>{{.Name}}</td>
                     <td>{{.Address}}</td>
+                    <td>{{.CreatedAt.Format "02.01.2006"}}</td>
                     <td class="logo-cell">
                         {{if .Logo}}
                         <img src="{{.Logo}}" alt="Логотип" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
@@ -345,9 +377,7 @@
                 </tr>
                 {{else}}
                 <tr>
-                    <td colspan="5" class="no-data">
-                        Магазины не найдены. Добавьте первый магазин!
-                    </td>
+                    
                 </tr>
                 {{end}}
             </tbody>
@@ -377,10 +407,14 @@
         
         // Сортировка по клику на заголовок
         document.querySelectorAll('th').forEach(th => {
-            if (th.textContent === 'ID' || th.textContent === 'Название') {
+            if (th.textContent === 'ID' || th.textContent === 'Название' || th.textContent === 'Дата создания') {
                 th.style.cursor = 'pointer';
                 th.addEventListener('click', function() {
-                    const sortBy = this.textContent === 'ID' ? 'id' : 'name';
+                    let sortBy = '';
+                    if (this.textContent === 'ID') sortBy = 'id';
+                    else if (this.textContent === 'Название') sortBy = 'name';
+                    else if (this.textContent === 'Дата создания') sortBy = 'created_at';
+                    
                     const currentSort = document.getElementById('sort').value;
                     const currentDirection = document.getElementById('direction').value;
                     
@@ -392,6 +426,24 @@
                     window.location.href = `/stores?sort=${sortBy}&direction=${newDirection}`;
                 });
             }
+        });
+        
+        // Добавляем обработчик для загрузки файлов
+        document.querySelectorAll('.top-btn[href*="/export/"]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // Показываем сообщение о начале загрузки
+                const originalText = this.innerHTML;
+                this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
+                this.style.opacity = '0.8';
+                this.style.cursor = 'wait';
+                
+                // Через 2 секунды возвращаем оригинальный текст
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.style.opacity = '1';
+                    this.style.cursor = 'pointer';
+                }, 2000);
+            });
         });
     </script>
 </body>

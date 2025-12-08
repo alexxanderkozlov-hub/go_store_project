@@ -199,6 +199,27 @@
             box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
         }
         
+        /* ЗЕЛЕНАЯ кнопка для скачивания Excel */
+        .top-btn.excel {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .top-btn.excel:hover {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        /* Иконки скачивания */
+        .download-icon {
+            font-size: 16px;
+        }
+        
+        /* Стиль для активной загрузки */
+        .loading {
+            opacity: 0.8;
+            cursor: wait !important;
+        }
+        
         /* Таблица */
         .table-container {
             background: white;
@@ -249,7 +270,7 @@
         }
         
         .actions-cell {
-            width: 250px;
+            width: 200px; /* Уменьшена ширина, так как осталось только 2 кнопки */
         }
         
         .action-btn {
@@ -292,16 +313,6 @@
             background: #7f8c8d;
         }
         
-        /* Синие кнопки просмотра */
-        .btn-view {
-            background: #3498db;
-            color: white;
-        }
-        
-        .btn-view:hover {
-            background: #2980b9;
-        }
-        
         /* Цены */
         .price {
             font-weight: 600;
@@ -335,94 +346,6 @@
             align-items: center;
             color: #666;
             font-size: 14px;
-        }
-        
-        /* Модальное окно для просмотра товара */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            transform: translateY(-20px);
-            transition: transform 0.3s;
-        }
-        
-        .modal-overlay.active .modal-content {
-            transform: translateY(0);
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-        }
-        
-        .modal-title {
-            color: #2c3e50;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #7f8c8d;
-            transition: color 0.3s;
-        }
-        
-        .modal-close:hover {
-            color: #e74c3c;
-        }
-        
-        .modal-body {
-            margin-bottom: 20px;
-        }
-        
-        .modal-field {
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-        
-        .modal-field strong {
-            color: #2c3e50;
-            display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        .modal-field span {
-            color: #333;
-            font-size: 16px;
         }
         
         /* Навигация */
@@ -589,17 +512,17 @@
             </div>
         </div>
         
-        <!-- Кнопки действий - без эмодзи -->
+        <!-- Кнопки действий -->
         <div class="top-buttons">
             <button class="top-btn" onclick="window.location.href='/products/create'">
                 Добавить товар
             </button>
-            <button class="top-btn secondary" onclick="exportToTXT()">
-                Скачать TXT
-            </button>
-            <button class="top-btn secondary" onclick="exportToExcel()">
-                Скачать Excel
-            </button>
+            <a href="/export/txt?type=products" class="top-btn secondary" id="downloadTxtBtn">
+                <span class="download-icon">📄</span> Скачать TXT
+            </a>
+            <a href="/export/csv?type=products" class="top-btn excel" id="downloadExcelBtn">
+                <span class="download-icon">📊</span> Скачать XLSX
+            </a>
         </div>
         
         <!-- Таблица товаров -->
@@ -630,14 +553,6 @@
                             {{end}}
                         </td>
                         <td class="actions-cell">
-                            <button class="action-btn btn-view" 
-                                    data-id="{{.ID}}"
-                                    data-name="{{.Name}}"
-                                    data-price="{{.Price}}"
-                                    data-description="{{.Description}}"
-                                    data-sku="{{.SKU}}">
-                                Просмотр
-                            </button>
                             <button class="action-btn btn-edit" 
                                     onclick="window.location.href='/products/{{.ID}}/edit'">
                                 Редактировать
@@ -671,69 +586,11 @@
             {{end}}
         </div>
         
-        <!-- Назад - без эмодзи -->
+        <!-- Назад -->
         <div class="back-container">
             <button class="back-btn" onclick="window.location.href='/main'">
                 Назад в навигатор
             </button>
-        </div>
-    </div>
-    
-    <!-- Модальное окно для просмотра товара -->
-    <div id="productModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Просмотр товара</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-field">
-                    <strong>ID товара:</strong>
-                    <span id="modalProductId">-</span>
-                </div>
-                <div class="modal-field">
-                    <strong>Название:</strong>
-                    <span id="modalProductName">-</span>
-                </div>
-                <div class="modal-field">
-                    <strong>Цена:</strong>
-                    <span id="modalProductPrice">-</span>
-                </div>
-                <div class="modal-field">
-                    <strong>Описание:</strong>
-                    <span id="modalProductDescription">-</span>
-                </div>
-                <div class="modal-field">
-                    <strong>Артикул:</strong>
-                    <span id="modalProductSku">-</span>
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closeModal()" style="
-                    background: #95a5a6;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 16px;
-                    flex: 1;
-                ">
-                    Закрыть
-                </button>
-                <button onclick="editCurrentProduct()" style="
-                    background: #3498db;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 16px;
-                    flex: 1;
-                ">
-                    Редактировать
-                </button>
-            </div>
         </div>
     </div>
 
@@ -765,73 +622,38 @@
             window.location.href = url;
         }
         
-        // Показать детали товара
-        let currentProductId = null;
-        
-        // Добавляем обработчики для всех кнопок просмотра
+        // Добавляем обработчики для кнопок скачивания
         document.addEventListener('DOMContentLoaded', function() {
-            const viewButtons = document.querySelectorAll('.btn-view');
-            viewButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    const name = this.getAttribute('data-name');
-                    const price = this.getAttribute('data-price');
-                    const description = this.getAttribute('data-description') || 'Нет описания';
-                    const sku = this.getAttribute('data-sku') || 'Не указан';
+            document.querySelectorAll('a[href*="/export/"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    // Показываем сообщение о начале загрузки
+                    const originalText = this.innerHTML;
+                    const originalHref = this.href;
                     
-                    currentProductId = id;
+                    // Добавляем текущие параметры фильтров к URL
+                    const search = document.getElementById('search').value;
+                    const sort = document.getElementById('sort').value;
+                    const direction = document.getElementById('direction').value;
                     
-                    // Заполняем модальное окно
-                    document.getElementById('modalProductId').textContent = id;
-                    document.getElementById('modalProductName').textContent = name;
-                    document.getElementById('modalProductPrice').textContent = parseFloat(price).toFixed(2) + ' ₽';
-                    document.getElementById('modalProductDescription').textContent = description;
-                    document.getElementById('modalProductSku').textContent = sku;
+                    let exportUrl = originalHref;
+                    if (search) exportUrl += `&search=${encodeURIComponent(search)}`;
+                    if (sort) exportUrl += `&sort=${sort}`;
+                    if (direction) exportUrl += `&direction=${direction}`;
                     
-                    // Показываем модальное окно
-                    document.getElementById('productModal').classList.add('active');
-                    document.body.style.overflow = 'hidden';
+                    this.href = exportUrl;
+                    
+                    this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
+                    this.classList.add('loading');
+                    
+                    // Через 2 секунды возвращаем оригинальный текст
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.classList.remove('loading');
+                        this.href = originalHref; // Возвращаем оригинальный href
+                    }, 2000);
                 });
             });
         });
-        
-        // Закрыть модальное окно
-        function closeModal() {
-            document.getElementById('productModal').classList.remove('active');
-            document.body.style.overflow = '';
-            currentProductId = null;
-        }
-        
-        // Редактировать текущий товар
-        function editCurrentProduct() {
-            if (currentProductId) {
-                window.location.href = `/products/${currentProductId}/edit`;
-            }
-        }
-        
-        // Закрытие модального окна при клике вне его
-        document.getElementById('productModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
-            }
-        });
-        
-        // Закрытие модального окна клавишей ESC
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeModal();
-            }
-        });
-        
-        // Экспорт в TXT
-        function exportToTXT() {
-            alert('Экспорт в TXT\nЭта функция находится в разработке.');
-        }
-        
-        // Экспорт в Excel
-        function exportToExcel() {
-            alert('Экспорт в Excel\nЭта функция находится в разработке.');
-        }
         
         // Автофокус на поле поиска
         document.getElementById('search').focus();

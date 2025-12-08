@@ -163,8 +163,9 @@
             margin-bottom: 30px;
         }
         
+        /* СИНЯЯ кнопка для новой поставки */
         .top-btn {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
             padding: 14px 28px;
             border: none;
@@ -180,9 +181,9 @@
         }
         
         .top-btn:hover {
-            background: linear-gradient(135deg, #27ae60, #219653);
+            background: linear-gradient(135deg, #2980b9, #2573a7);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
         }
         
         .top-btn.secondary {
@@ -192,6 +193,27 @@
         .top-btn.secondary:hover {
             background: linear-gradient(135deg, #2980b9, #2573a7);
             box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* ЗЕЛЕНАЯ кнопка для скачивания Excel */
+        .top-btn.excel {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .top-btn.excel:hover {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        /* Иконки скачивания */
+        .download-icon {
+            font-size: 16px;
+        }
+        
+        /* Стиль для активной загрузки */
+        .loading {
+            opacity: 0.8;
+            cursor: wait !important;
         }
         
         /* Таблица */
@@ -476,12 +498,12 @@
             <button class="top-btn" onclick="window.location.href='/supplies/create'">
                 <span style="font-size: 20px;">+</span> Новая поставка
             </button>
-            <button class="top-btn secondary" onclick="exportToTXT()">
-                <span>📥</span> Скачать TXT
-            </button>
-            <button class="top-btn secondary" onclick="exportToExcel()">
-                <span>📊</span> Скачать Excel
-            </button>
+            <a href="/export/txt?type=supplies" class="top-btn secondary" id="downloadTxtBtn">
+                <span class="download-icon">📄</span> Скачать TXT
+            </a>
+            <a href="/export/csv?type=supplies" class="top-btn excel" id="downloadExcelBtn">
+                <span class="download-icon">📊</span> Скачать XLSX
+            </a>
         </div>
         
         <!-- Таблица поставок -->
@@ -523,13 +545,7 @@
                     </tr>
                     {{else}}
                     <tr>
-                        <td colspan="8" class="no-data">
-                            {{if .search_query}}
-                            Поставки по запросу "{{.search_query}}" не найдены
-                            {{else}}
-                            Нет данных для отображения
-                            {{end}}
-                        </td>
+                        
                     </tr>
                     {{end}}
                 </tbody>
@@ -623,15 +639,40 @@
             alert(`Просмотр поставки #${id}\nДетальная информация о поставке.`);
         }
         
-        // Экспорт в TXT
-        function exportToTXT() {
-            alert('Экспорт в TXT\nЭта функция находится в разработке.');
-        }
-        
-        // Экспорт в Excel
-        function exportToExcel() {
-            alert('Экспорт в Excel\nЭта функция находится в разработке.');
-        }
+        // Добавляем обработчики для кнопок скачивания
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('a[href*="/export/"]').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    // Показываем сообщение о начале загрузки
+                    const originalText = this.innerHTML;
+                    const originalHref = this.href;
+                    
+                    // Добавляем текущие параметры фильтров к URL
+                    const search = document.getElementById('search').value;
+                    const status = document.getElementById('status').value;
+                    const sort = document.getElementById('sort').value;
+                    const direction = document.getElementById('direction').value;
+                    
+                    let exportUrl = originalHref;
+                    if (search) exportUrl += `&search=${encodeURIComponent(search)}`;
+                    if (status) exportUrl += `&status=${status}`;
+                    if (sort) exportUrl += `&sort=${sort}`;
+                    if (direction) exportUrl += `&direction=${direction}`;
+                    
+                    this.href = exportUrl;
+                    
+                    this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
+                    this.classList.add('loading');
+                    
+                    // Через 2 секунды возвращаем оригинальный текст
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.classList.remove('loading');
+                        this.href = originalHref; // Возвращаем оригинальный href
+                    }, 2000);
+                });
+            });
+        });
         
         // Автофокус на поле поиска
         document.getElementById('search').focus();

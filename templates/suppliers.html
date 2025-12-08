@@ -124,12 +124,21 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            text-decoration: none;
         }
         
         .top-btn:hover {
             background: #2980b9;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
         }
         
         /* Таблица с вертикальными линиями */
@@ -270,11 +279,31 @@
         .download-icon {
             font-size: 16px;
         }
+        
+        /* Счетчик поставщиков */
+        .supplier-count {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+        }
+        
+        .supplier-count strong {
+            color: #3498db;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="page-title">Список поставщиков</h1>
+        
+        <!-- Счетчик поставщиков -->
+        <div class="supplier-count">
+            Всего поставщиков: <strong>{{.total_count}}</strong>
+        </div>
         
         <!-- Фильтры -->
         <div class="filters">
@@ -314,12 +343,12 @@
             <button class="top-btn" onclick="window.location.href='/suppliers/create'">
                 <span style="font-size: 18px;">+</span> Добавить поставщика
             </button>
-            <button class="top-btn" onclick="alert('Функция скачивания TXT')">
-                <span class="download-icon">📥</span> Скачать TXT
-            </button>
-            <button class="top-btn" onclick="alert('Функция скачивания XLSX')">
+            <a href="/export/txt?type=suppliers" class="top-btn">
+                <span class="download-icon">📄</span> Скачать TXT
+            </a>
+            <a href="/export/csv?type=suppliers" class="top-btn btn-success">
                 <span class="download-icon">📊</span> Скачать XLSX
-            </button>
+            </a>
         </div>
         
         <!-- Таблица -->
@@ -349,29 +378,11 @@
                 </tr>
                 {{else}}
                 <tr>
-                    <td colspan="6" class="no-data">
-                        {{if .search_query}}
-                        Поставщики по запросу "{{.search_query}}" не найдены
-                        {{else}}
-                        Поставщики не найдены. Добавьте первого поставщика!
-                        {{end}}
-                    </td>
+
                 </tr>
                 {{end}}
             </tbody>
         </table>
-        
-        <!-- Информация о сортировке -->
-        <div style="margin-top: 15px; color: #7f8c8d; font-size: 14px;">
-            Всего поставщиков: {{.total_count}}
-            {{if .sort_by}}
-            | Сортировка: 
-            {{if eq .sort_by "id"}}ID{{end}}
-            {{if eq .sort_by "name"}}Названию{{end}}
-            {{if eq .sort_by "phone"}}Телефону{{end}}
-            ({{if eq .direction "asc"}}по возрастанию{{else}}по убыванию{{end}})
-            {{end}}
-        </div>
         
         <!-- Исправленная кнопка "Назад" -->
         <div class="back-container">
@@ -436,6 +447,24 @@
             
             window.location.href = url;
         }
+        
+        // Добавляем обработчик для загрузки файлов
+        document.querySelectorAll('.top-btn[href*="/export/"]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // Показываем сообщение о начале загрузки
+                const originalText = this.innerHTML;
+                this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
+                this.style.opacity = '0.8';
+                this.style.cursor = 'wait';
+                
+                // Через 2 секунды возвращаем оригинальный текст
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.style.opacity = '1';
+                    this.style.cursor = 'pointer';
+                }, 2000);
+            });
+        });
     </script>
 </body>
 </html>
