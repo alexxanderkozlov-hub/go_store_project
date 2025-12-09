@@ -175,46 +175,12 @@
             transform: translateY(0);
         }
         
-        .form-info {
-            background: #e8f4fc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 25px;
-            font-size: 14px;
-            color: #2c3e50;
-            border-left: 4px solid #3498db;
-        }
-        
-        .form-info ul {
-            margin-left: 20px;
-            margin-top: 8px;
-        }
-        
-        .form-info li {
-            margin-bottom: 5px;
-        }
-        
         .footer {
             text-align: center;
             margin-top: 25px;
             color: #7f8c8d;
             font-size: 14px;
             padding: 10px;
-        }
-        
-        /* Стили для превью изображения */
-        .image-preview {
-            margin-top: 15px;
-            text-align: center;
-        }
-        
-        .preview-image {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 8px;
-            border: 2px solid #e0e0e0;
-            padding: 5px;
-            background: white;
         }
         
         /* Стили для цены */
@@ -242,6 +208,37 @@
             font-size: 13px;
             color: #7f8c8d;
             margin-top: 5px;
+        }
+        
+        /* Стили для кнопки генерации SKU */
+        .generate-sku-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: background 0.3s;
+        }
+        
+        .generate-sku-btn:hover {
+            background: #7f8c8d;
+        }
+        
+        .sku-counter {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .char-counter {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            text-align: right;
         }
     </style>
 </head>
@@ -287,11 +284,13 @@
                                    id="sku" 
                                    name="sku" 
                                    value="{{.product.SKU}}" 
-                                   placeholder="Например: PRD-001"
+                                   placeholder="Например: 12345678"
                                    maxlength="50">
                             <div class="sku-hint">
-                                Уникальный код товара, можно оставить пустым
+                                Уникальный код товара (8 цифр), можно оставить пустым
                             </div>
+                            <!-- Место для кнопки генерации и счетчика -->
+                            <div id="sku-controls"></div>
                         </div>
                     </div>
                     
@@ -337,37 +336,7 @@
                                   name="description" 
                                   placeholder="Введите описание товара (необязательно)">{{.product.Description}}</textarea>
                         <div style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
-                            Можно оставить пустым, максимум 1000 символов
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="photo">Ссылка на изображение</label>
-                        <input type="text" 
-                               id="photo" 
-                               name="photo" 
-                               value="{{.product.Photo}}"
-                               placeholder="https://example.com/image.jpg">
-                        <div style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
-                            Введите URL изображения (необязательно)
-                        </div>
-                        
-                        {{if .product.Photo}}
-                        <div class="image-preview">
-                            <img src="{{.product.Photo}}" alt="Превью" class="preview-image" id="previewImage">
-                        </div>
-                        {{end}}
-                    </div>
-                    
-                    <div class="form-info">
-                        <strong>Полезная информация:</strong>
-                        <ul>
-                            <li>Название и цена товара обязательны для заполнения</li>
-                            <li>Артикул (SKU) - уникальный код товара, используется для идентификации</li>
-                            <li>Цена должна быть положительным числом</li>
-                            <li>Категория помогает систематизировать товары</li>
-                            <li>Описание помогает покупателям лучше понять товар</li>
-                        </ul>
                     </div>
                     
                     <div class="form-actions">
@@ -389,191 +358,168 @@
     </div>
 
     <script>
-        // Автофокус на поле названия
-        document.getElementById('name').focus();
-        
-        // Подсчет символов для описания
-        const descriptionField = document.getElementById('description');
-        const charCounter = document.createElement('div');
-        charCounter.style.fontSize = '13px';
-        charCounter.style.color = '#7f8c8d';
-        charCounter.style.marginTop = '5px';
-        charCounter.style.textAlign = 'right';
-        descriptionField.parentNode.insertBefore(charCounter, descriptionField.nextSibling);
-        
-        function updateCharCounter() {
-            const length = descriptionField.value.length;
-            charCounter.textContent = `${length} / 1000 символов`;
-            if (length > 900) {
-                charCounter.style.color = '#e74c3c';
-            } else if (length > 800) {
-                charCounter.style.color = '#f39c12';
-            } else {
-                charCounter.style.color = '#7f8c8d';
-            }
-        }
-        
-        descriptionField.addEventListener('input', updateCharCounter);
-        updateCharCounter(); // Инициализация
-        
-        // Подсчет символов для артикула
-        const skuField = document.getElementById('sku');
-        const skuCounter = document.createElement('div');
-        skuCounter.style.fontSize = '13px';
-        skuCounter.style.color = '#7f8c8d';
-        skuCounter.style.marginTop = '5px';
-        skuCounter.style.textAlign = 'right';
-        skuField.parentNode.insertBefore(skuCounter, skuField.nextSibling);
-        
-        function updateSkuCounter() {
-            const length = skuField.value.length;
-            skuCounter.textContent = `${length} / 50 символов`;
-            if (length > 40) {
-                skuCounter.style.color = '#e74c3c';
-            } else if (length > 30) {
-                skuCounter.style.color = '#f39c12';
-            } else {
-                skuCounter.style.color = '#7f8c8d';
-            }
-        }
-        
-        skuField.addEventListener('input', updateSkuCounter);
-        updateSkuCounter(); // Инициализация
-        
-        // Превью изображения
-        const photoField = document.getElementById('photo');
-        let previewImage = document.getElementById('previewImage');
-        
-        photoField.addEventListener('input', function() {
-            const url = this.value.trim();
+        // Ждем полной загрузки DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            // Автофокус на поле названия
+            document.getElementById('name').focus();
             
-            if (!previewImage && url) {
-                const previewDiv = document.createElement('div');
-                previewDiv.className = 'image-preview';
-                previewImage = document.createElement('img');
-                previewImage.className = 'preview-image';
-                previewImage.id = 'previewImage';
-                previewImage.alt = 'Превью';
-                previewImage.onerror = function() {
-                    this.style.display = 'none';
-                };
-                previewDiv.appendChild(previewImage);
-                photoField.parentNode.appendChild(previewDiv);
-            }
+            // Подсчет символов для описания
+            const descriptionField = document.getElementById('description');
+            const charCounter = document.createElement('div');
+            charCounter.className = 'char-counter';
+            charCounter.textContent = '0 / 1000 символов';
             
-            if (previewImage) {
-                if (url) {
-                    previewImage.src = url;
-                    previewImage.style.display = 'block';
+            // Вставляем счетчик после textarea
+            descriptionField.parentNode.insertBefore(charCounter, descriptionField.nextSibling);
+            
+            function updateCharCounter() {
+                const length = descriptionField.value.length;
+                charCounter.textContent = `${length} / 1000 символов`;
+                if (length > 900) {
+                    charCounter.style.color = '#e74c3c';
+                } else if (length > 800) {
+                    charCounter.style.color = '#f39c12';
                 } else {
-                    previewImage.style.display = 'none';
+                    charCounter.style.color = '#7f8c8d';
                 }
             }
-        });
-        
-        // Валидация формы
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(e) {
-            const nameField = document.getElementById('name');
-            const priceField = document.getElementById('price');
+            
+            descriptionField.addEventListener('input', updateCharCounter);
+            updateCharCounter(); // Инициализация
+            
+            // Подсчет символов для артикула и кнопка генерации
             const skuField = document.getElementById('sku');
-            const nameValue = nameField.value.trim();
-            const priceValue = parseFloat(priceField.value);
-            const skuValue = skuField.value.trim();
+            const skuControls = document.getElementById('sku-controls');
             
-            // Валидация названия
-            if (!nameValue) {
-                e.preventDefault();
-                alert('Пожалуйста, введите название товара');
-                nameField.focus();
-                return;
+            // Создаем контейнер для кнопки и счетчика
+            const skuCounter = document.createElement('div');
+            skuCounter.className = 'sku-counter';
+            skuCounter.textContent = '0 / 50 символов';
+            
+            const generateSkuBtn = document.createElement('button');
+            generateSkuBtn.type = 'button';
+            generateSkuBtn.className = 'generate-sku-btn';
+            generateSkuBtn.textContent = 'Сгенерировать 8 цифр';
+            
+            // Добавляем элементы в контейнер
+            skuControls.appendChild(generateSkuBtn);
+            skuControls.appendChild(skuCounter);
+            
+            function updateSkuCounter() {
+                const length = skuField.value.length;
+                skuCounter.textContent = `${length} / 50 символов`;
+                if (length > 40) {
+                    skuCounter.style.color = '#e74c3c';
+                } else if (length > 30) {
+                    skuCounter.style.color = '#f39c12';
+                } else {
+                    skuCounter.style.color = '#7f8c8d';
+                }
             }
             
-            if (nameValue.length > 100) {
-                e.preventDefault();
-                alert('Название товара должно быть не более 100 символов');
-                nameField.focus();
-                return;
-            }
+            // Обработчик генерации SKU - ГЕНЕРИРУЕМ 8 ЦИФР
+            generateSkuBtn.addEventListener('click', function() {
+                // Генерируем 8 случайных цифр
+                let randomDigits = '';
+                for (let i = 0; i < 8; i++) {
+                    randomDigits += Math.floor(Math.random() * 10); // 0-9
+                }
+                
+                // Заполняем поле SKU
+                skuField.value = randomDigits;
+                updateSkuCounter();
+                
+                // Фокус на следующее поле
+                document.getElementById('price').focus();
+            });
             
-            // Валидация артикула
-            if (skuValue.length > 50) {
-                e.preventDefault();
-                alert('Артикул должен быть не более 50 символов');
-                skuField.focus();
-                return;
-            }
+            skuField.addEventListener('input', updateSkuCounter);
+            updateSkuCounter(); // Инициализация
             
-            // Валидация цены
-            if (isNaN(priceValue) || priceValue < 0) {
-                e.preventDefault();
-                alert('Пожалуйста, введите корректную цену (положительное число)');
-                priceField.focus();
-                return;
-            }
+            // Валидация формы
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const nameField = document.getElementById('name');
+                const priceField = document.getElementById('price');
+                const skuField = document.getElementById('sku');
+                const nameValue = nameField.value.trim();
+                const priceValue = parseFloat(priceField.value);
+                const skuValue = skuField.value.trim();
+                
+                // Валидация названия
+                if (!nameValue) {
+                    e.preventDefault();
+                    alert('Пожалуйста, введите название товара');
+                    nameField.focus();
+                    return;
+                }
+                
+                if (nameValue.length > 100) {
+                    e.preventDefault();
+                    alert('Название товара должно быть не более 100 символов');
+                    nameField.focus();
+                    return;
+                }
+                
+                // Валидация артикула
+                if (skuValue.length > 50) {
+                    e.preventDefault();
+                    alert('Артикул должен быть не более 50 символов');
+                    skuField.focus();
+                    return;
+                }
+                
+                // Проверяем что SKU состоит только из цифр (если заполнен)
+                if (skuValue && !/^\d+$/.test(skuValue)) {
+                    e.preventDefault();
+                    alert('Артикул должен содержать только цифры');
+                    skuField.focus();
+                    return;
+                }
+                
+                // Валидация цены
+                if (isNaN(priceValue) || priceValue < 0) {
+                    e.preventDefault();
+                    alert('Пожалуйста, введите корректную цену (положительное число)');
+                    priceField.focus();
+                    return;
+                }
+                
+                // Валидация описания
+                if (descriptionField.value.length > 1000) {
+                    e.preventDefault();
+                    alert('Описание товара должно быть не более 1000 символов');
+                    descriptionField.focus();
+                    return;
+                }
+                
+                // Показываем сообщение о сохранении
+                const submitBtn = form.querySelector('.btn-submit');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<span style="margin-right: 8px;">⏳</span> Сохраняем...';
+                submitBtn.disabled = true;
+            });
             
-            // Валидация описания
-            if (descriptionField.value.length > 1000) {
-                e.preventDefault();
-                alert('Описание товара должно быть не более 1000 символов');
-                descriptionField.focus();
-                return;
-            }
-            
-            // Показываем сообщение о сохранении
-            const submitBtn = form.querySelector('.btn-submit');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span style="margin-right: 8px;">⏳</span> Сохраняем...';
-            submitBtn.disabled = true;
-        });
-        
-        // Нажатие Ctrl+Enter для сохранения
-        descriptionField.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'Enter') {
-                form.dispatchEvent(new Event('submit'));
-            }
-        });
-        
-        // Автоматическое форматирование цены
-        const priceField = document.getElementById('price');
-        if (priceField) {
-            priceField.addEventListener('blur', function() {
-                if (this.value) {
-                    const value = parseFloat(this.value);
-                    if (!isNaN(value)) {
-                        this.value = value.toFixed(2);
-                    }
+            // Нажатие Ctrl+Enter для сохранения
+            descriptionField.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    form.dispatchEvent(new Event('submit'));
                 }
             });
-        }
-        
-        // Генерация артикула при необходимости
-        const generateSkuBtn = document.createElement('button');
-        generateSkuBtn.type = 'button';
-        generateSkuBtn.textContent = 'Сгенерировать';
-        generateSkuBtn.style.cssText = `
-            background: #95a5a6;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-top: 5px;
-            transition: background 0.3s;
-        `;
-        generateSkuBtn.onmouseover = function() { this.style.background = '#7f8c8d'; };
-        generateSkuBtn.onmouseout = function() { this.style.background = '#95a5a6'; };
-        generateSkuBtn.onclick = function() {
-            if (!skuField.value.trim()) {
-                const randomNum = Math.floor(1000 + Math.random() * 9000);
-                const namePrefix = nameField.value.substring(0, 3).toUpperCase().replace(/\s/g, '');
-                skuField.value = `${namePrefix}-${randomNum}`;
-                updateSkuCounter();
+            
+            // Автоматическое форматирование цены
+            const priceField = document.getElementById('price');
+            if (priceField) {
+                priceField.addEventListener('blur', function() {
+                    if (this.value) {
+                        const value = parseFloat(this.value);
+                        if (!isNaN(value)) {
+                            this.value = value.toFixed(2);
+                        }
+                    }
+                });
             }
-        };
-        
-        skuField.parentNode.insertBefore(generateSkuBtn, skuField.nextSibling);
+        });
     </script>
 </body>
 </html>

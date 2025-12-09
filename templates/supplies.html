@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поставки - СкладPRO</title>
     <style>
+        /* Все стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -31,7 +32,6 @@
             font-weight: 700;
         }
         
-        /* Статистика */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -68,7 +68,6 @@
             color: #2ecc71;
         }
         
-        /* Фильтры */
         .filters {
             background: white;
             border-radius: 12px;
@@ -156,14 +155,12 @@
             box-shadow: 0 6px 15px rgba(149, 165, 166, 0.3);
         }
         
-        /* Кнопки действий */
         .top-buttons {
             display: flex;
             gap: 15px;
             margin-bottom: 30px;
         }
         
-        /* СИНЯЯ кнопка для новой поставки */
         .top-btn {
             background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
@@ -195,7 +192,6 @@
             box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
         }
         
-        /* ЗЕЛЕНАЯ кнопка для скачивания Excel */
         .top-btn.excel {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
         }
@@ -205,18 +201,15 @@
             box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
         }
         
-        /* Иконки скачивания */
         .download-icon {
             font-size: 16px;
         }
         
-        /* Стиль для активной загрузки */
         .loading {
             opacity: 0.8;
             cursor: wait !important;
         }
         
-        /* Таблица */
         .table-container {
             background: white;
             border-radius: 12px;
@@ -332,7 +325,6 @@
             background: #27ae60;
         }
         
-        /* Сообщение "нет данных" */
         .no-data {
             text-align: center;
             padding: 60px 20px;
@@ -340,7 +332,13 @@
             font-size: 16px;
         }
         
-        /* Футер таблицы */
+        .no-data-row {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
         .table-footer {
             background: #f8fafc;
             padding: 15px 20px;
@@ -352,7 +350,6 @@
             font-size: 14px;
         }
         
-        /* Навигация */
         .back-container {
             text-align: center;
             margin-top: 40px;
@@ -380,7 +377,6 @@
             box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
         }
         
-        /* Адаптивность */
         @media (max-width: 1200px) {
             .container {
                 padding: 20px;
@@ -522,31 +518,37 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range .supplies}}
-                    <tr>
-                        <td>{{.ID}}</td>
-                        <td><strong>{{.Supplier}}</strong></td>
-                        <td><strong>{{.Product}}</strong></td>
-                        <td><strong>{{.Quantity}}</strong></td>
-                        <td><span class="price">{{printf "%.2f" .Price}}</span></td>
-                        <td><span class="total">{{printf "%.2f" .Total}}</span></td>
-                        <td>{{.Date}}</td>
-                        <td class="actions-cell">
-                            <button class="action-btn btn-view" onclick="viewSupplyDetails({{.ID}})">
-                                👁 Просмотр
-                            </button>
-                            <button class="action-btn btn-edit" onclick="window.location.href='/supplies/{{.ID}}/edit'">
-                                ✏ Редактировать
-                            </button>
-                            <button class="action-btn btn-delete" onclick="deleteSupply({{.ID}})">
-                                🗑 Удалить
-                            </button>
-                        </td>
-                    </tr>
+                    {{if .supplies}}
+                        {{range .supplies}}
+                        <tr>
+                            <td>{{.ID}}</td>
+                            <td><strong>{{.Supplier}}</strong></td>
+                            <td><strong>{{.Product}}</strong></td>
+                            <td><strong>{{.Quantity}}</strong></td>
+                            <td><span class="price">{{printf "%.2f" .Price}}</span></td>
+                            <td><span class="total">{{printf "%.2f" .Total}}</span></td>
+                            <td>{{.Date}}</td>
+                            <td class="actions-cell">
+                                <button class="action-btn btn-view" onclick="viewSupplyDetails({{.ID}})">
+                                    👁 Просмотр
+                                </button>
+                                <button class="action-btn btn-edit" onclick="window.location.href='/supplies/{{.ID}}/edit'">
+                                    ✏ Редактировать
+                                </button>
+                                <button class="action-btn btn-delete" onclick="deleteSupply({{.ID}})">
+                                    🗑 Удалить
+                                </button>
+                            </td>
+                        </tr>
+                        {{end}}
                     {{else}}
-                    <tr>
-                        
-                    </tr>
+                        <tr>
+                            <td colspan="8" class="no-data-row">
+                                <div class="no-data">
+                                    📭 Нет данных для отображения
+                                </div>
+                            </td>
+                        </tr>
                     {{end}}
                 </tbody>
             </table>
@@ -591,35 +593,42 @@
         });
         
         function applyFilters() {
-            const search = document.getElementById('search').value;
+            const search = document.getElementById('search').value.trim();
             const status = document.getElementById('status').value;
             const sort = document.getElementById('sort').value;
             const direction = document.getElementById('direction').value;
             
             let url = '/supplies?';
-            if (search) url += `search=${encodeURIComponent(search)}&`;
-            if (status) url += `status=${status}&`;
-            if (sort) url += `sort=${sort}&`;
-            if (direction) url += `direction=${direction}`;
+            const params = [];
             
-            // Убираем последний & если есть
-            if (url.endsWith('&')) url = url.slice(0, -1);
+            if (search) params.push(`search=${encodeURIComponent(search)}`);
+            if (status) params.push(`status=${status}`);
+            if (sort) params.push(`sort=${sort}`);
+            if (direction) params.push(`direction=${direction}`);
+            
+            if (params.length > 0) {
+                url += params.join('&');
+            }
             
             window.location.href = url;
         }
         
         // Сортировка по клику на заголовок
         function sortTable(sortBy) {
-            const search = document.getElementById('search').value;
+            const search = document.getElementById('search').value.trim();
             const status = document.getElementById('status').value;
-            const currentSort = document.getElementById('sort').value;
-            const currentDirection = document.getElementById('direction').value;
             
+            // Получаем текущие параметры сортировки из URL или из селектов
+            let currentSort = document.getElementById('sort').value;
+            let currentDirection = document.getElementById('direction').value;
+            
+            // Определяем новое направление сортировки
             let newDirection = 'asc';
             if (currentSort === sortBy) {
                 newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
             }
             
+            // Формируем URL
             let url = `/supplies?sort=${sortBy}&direction=${newDirection}`;
             if (search) url += `&search=${encodeURIComponent(search)}`;
             if (status) url += `&status=${status}`;
@@ -645,21 +654,28 @@
                 btn.addEventListener('click', function(e) {
                     // Показываем сообщение о начале загрузки
                     const originalText = this.innerHTML;
-                    const originalHref = this.href;
+                    const originalHref = this.getAttribute('href');
                     
                     // Добавляем текущие параметры фильтров к URL
-                    const search = document.getElementById('search').value;
+                    const search = document.getElementById('search').value.trim();
                     const status = document.getElementById('status').value;
                     const sort = document.getElementById('sort').value;
                     const direction = document.getElementById('direction').value;
                     
                     let exportUrl = originalHref;
-                    if (search) exportUrl += `&search=${encodeURIComponent(search)}`;
-                    if (status) exportUrl += `&status=${status}`;
-                    if (sort) exportUrl += `&sort=${sort}`;
-                    if (direction) exportUrl += `&direction=${direction}`;
+                    const params = [];
                     
-                    this.href = exportUrl;
+                    if (search) params.push(`search=${encodeURIComponent(search)}`);
+                    if (status) params.push(`status=${status}`);
+                    if (sort) params.push(`sort=${sort}`);
+                    if (direction) params.push(`direction=${direction}`);
+                    
+                    if (params.length > 0) {
+                        exportUrl += (exportUrl.includes('?') ? '&' : '?') + params.join('&');
+                    }
+                    
+                    // Обновляем ссылку
+                    this.setAttribute('href', exportUrl);
                     
                     this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
                     this.classList.add('loading');
@@ -668,14 +684,14 @@
                     setTimeout(() => {
                         this.innerHTML = originalText;
                         this.classList.remove('loading');
-                        this.href = originalHref; // Возвращаем оригинальный href
+                        this.setAttribute('href', originalHref); // Возвращаем оригинальный href
                     }, 2000);
                 });
             });
+            
+            // Автофокус на поле поиска
+            document.getElementById('search').focus();
         });
-        
-        // Автофокус на поле поиска
-        document.getElementById('search').focus();
     </script>
 </body>
 </html>

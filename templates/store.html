@@ -5,309 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Магазины - СкладPRO</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: white;
-            color: #333;
-            line-height: 1.6;
-            padding: 30px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .page-title {
-            font-size: 32px;
-            color: #000000;
-            margin-bottom: 25px;
-            font-weight: 700;
-        }
-        
-        /* Фильтры */
-        .filters {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .filter-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-            align-items: center;
-        }
-        
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .filter-group label {
-            font-size: 15px;
-            color: #555;
-            font-weight: 500;
-        }
-        
-        select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 15px;
-            background: white;
-            min-width: 180px;
-        }
-        
-        .filter-buttons {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 15px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .btn-apply {
-            background: #3498db;
-            color: white;
-        }
-        
-        .btn-apply:hover {
-            background: #2980b9;
-        }
-        
-        .btn-reset {
-            background: #95a5a6;
-            color: white;
-        }
-        
-        .btn-reset:hover {
-            background: #7f8c8d;
-        }
-        
-        /* Кнопки действий */
-        .top-buttons {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        
-        .top-btn {
-            background: #3498db;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-        
-        .top-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
-        
-        .btn-success {
-            background: #27ae60;
-        }
-        
-        .btn-success:hover {
-            background: #229954;
-        }
-        
-        /* Таблица с вертикальными линиями */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        th {
-            background: #f8fafc;
-            color: #2c3e50;
-            font-weight: 600;
-            text-align: left;
-            padding: 16px 20px;
-            border-bottom: 2px solid #e0e0e0;
-            border-right: 1px solid #e0e0e0;
-        }
-        
-        th:last-child {
-            border-right: none;
-        }
-        
-        td {
-            padding: 14px 20px;
-            border-bottom: 1px solid #f0f0f0;
-            border-right: 1px solid #f0f0f0;
-        }
-        
-        td:last-child {
-            border-right: none;
-        }
-        
-        tr:hover {
-            background: #f8fafc;
-        }
-        
-        .logo-cell {
-            width: 60px;
-            text-align: center;
-        }
-        
-        .logo-placeholder {
-            width: 40px;
-            height: 40px;
-            background: #f0f0f0;
-            border-radius: 4px;
-            margin: 0 auto;
-        }
-        
-        .actions-cell {
-            width: 200px;
-        }
-        
-        .action-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-right: 8px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        
-        .action-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-        
-        .btn-edit {
-            background: #3498db;
-            color: white;
-        }
-        
-        .btn-edit:hover {
-            background: #2980b9;
-        }
-        
-        .btn-delete {
-            background: #e74c3c;
-            color: white;
-        }
-        
-        .btn-delete:hover {
-            background: #c0392b;
-        }
-        
-        /* Назад - исправленная кнопка */
-        .back-container {
-            margin-top: 30px;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .back-btn {
-            background: #3498db;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .back-btn:hover {
-            background: #2980b9;
-            transform: none;
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
-        
-        /* Последняя строка без нижней границы */
-        tr:last-child td {
-            border-bottom: none;
-        }
-        
-        /* Сообщение "нет данных" */
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-            font-size: 16px;
-        }
-        
-        /* Иконки для кнопок скачивания */
-        .download-icon {
-            font-size: 16px;
-        }
-        
-        /* Счетчик магазинов */
-        .store-count {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            color: #2c3e50;
-            border-left: 4px solid #3498db;
-        }
-        
-        .store-count strong {
-            color: #3498db;
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: white; color: #333; line-height: 1.6; padding: 30px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .page-title { font-size: 32px; color: #000; margin-bottom: 25px; font-weight: 700; }
+
+        .filters { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .filter-row { display:flex; gap:20px; margin-bottom:15px; align-items:center; flex-wrap:wrap; }
+        .filter-group { display:flex; align-items:center; gap:10px; }
+        .filter-group label { font-size:15px; color:#555; font-weight:500; }
+        select, input[type="text"] { padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:15px; min-width:180px; }
+        .filter-buttons { display:flex; gap:12px; }
+
+        .btn { padding:10px 20px; border:none; border-radius:6px; font-size:15px; cursor:pointer; font-weight:500; transition:all .2s ease; }
+        .btn-apply { background:#3498db; color:#fff; }
+        .btn-reset { background:#95a5a6; color:#fff; }
+
+        .top-buttons { display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }
+        .top-btn { background:#3498db; color:white; padding:12px 24px; border:none; border-radius:6px; cursor:pointer; font-size:15px; font-weight:500; display:inline-flex; align-items:center; gap:8px; text-decoration:none;}
+        .btn-success { background:#27ae60; color:#fff; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+
+        table { width:100%; border-collapse:collapse; margin-top:10px; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; }
+        th, td { padding:14px 18px; border-bottom:1px solid #f0f0f0; border-right:1px solid #f0f0f0; text-align:left; vertical-align:middle; }
+        th { background:#f8fafc; color:#2c3e50; font-weight:600; padding:16px 20px; border-bottom:2px solid #e0e0e0; }
+        th:last-child, td:last-child { border-right:none; }
+        tr:hover { background:#f8fafc; }
+        .logo-cell { width:60px; text-align:center; }
+        .logo-placeholder { width:40px; height:40px; background:#f0f0f0; border-radius:4px; margin:0 auto; }
+        .actions-cell { width:200px; }
+        .action-btn { padding:8px 12px; border:none; border-radius:4px; font-size:14px; cursor:pointer; margin-right:8px; font-weight:500; }
+        .btn-edit { background:#3498db; color:#fff; }
+        .btn-delete { background:#e74c3c; color:#fff; }
+        .back-container { margin-top:30px; display:flex; justify-content:center; }
+        .back-btn { background:#3498db; color:#fff; padding:12px 24px; border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+
+        .no-data { text-align:center; padding:40px; color:#7f8c8d; font-size:16px; }
+        .download-icon { font-size:16px; }
+        .store-count { background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:20px; font-size:16px; color:#2c3e50; border-left:4px solid #3498db; }
+        .store-count strong { color:#3498db; }
+        tr:last-child td { border-bottom:none; }
+
+        @media (max-width: 768px) {
+            .filter-row { flex-direction:column; align-items:stretch; }
+            .actions-cell { width:auto; }
+            .top-buttons { flex-direction:column; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="page-title">Список магазинов</h1>
-        
-        <!-- Счетчик магазинов -->
+
         <div class="store-count">
-            Всего магазинов: <strong>{{.total_count}}</strong>
+            Всего магазинов: <strong id="total-count">{{.total_count}}</strong>
         </div>
-        
-        <!-- Фильтры -->
+
         <div class="filters">
             <div class="filter-row">
                 <div class="filter-group">
-                    <label>Сортировать по:</label>
+                    <label for="search">Поиск:</label>
+                    <input id="search" type="text" placeholder="Название или адрес" value="{{.search_query}}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="sort">Сортировать по:</label>
                     <select id="sort">
                         <option value="">Без сортировки</option>
                         <option value="id" {{if eq .sort_by "id"}}selected{{end}}>ID</option>
@@ -315,37 +76,31 @@
                         <option value="created_at" {{if eq .sort_by "created_at"}}selected{{end}}>Дате создания</option>
                     </select>
                 </div>
-                
+
                 <div class="filter-group">
-                    <label>Направление:</label>
+                    <label for="direction">Направление:</label>
                     <select id="direction">
                         <option value="asc" {{if eq .direction "asc"}}selected{{end}}>По возрастанию</option>
                         <option value="desc" {{if eq .direction "desc"}}selected{{end}}>По убыванию</option>
                     </select>
                 </div>
             </div>
-            
+
             <div class="filter-buttons">
                 <button class="btn btn-apply" id="applyBtn">Применить</button>
                 <button class="btn btn-reset" id="resetBtn">Сбросить</button>
             </div>
         </div>
-        
-        <!-- Кнопки действий -->
+
         <div class="top-buttons">
             <button class="top-btn" onclick="window.location.href='/stores/create'">
-                <span style="font-size: 18px;">+</span> Добавить магазин
+                <span style="font-size:18px;">+</span> Добавить магазин
             </button>
-            <a href="/export/txt?type=stores" class="top-btn">
-                <span class="download-icon">📄</span> Скачать TXT
-            </a>
-            <a href="/export/csv?type=stores" class="top-btn btn-success">
-                <span class="download-icon">📊</span> Скачать XLSX
-            </a>
+            <a href="/export/txt?type=stores" class="top-btn">Скачать TXT</a>
+            <a href="/export/csv?type=stores" class="btn-success">Скачать XLSX</a>
         </div>
-        
-        <!-- Таблица -->
-        <table>
+
+        <table id="storesTable">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -356,16 +111,16 @@
                     <th class="actions-cell">Действия</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="storesBody">
                 {{range .stores}}
                 <tr>
-                    <td>{{.ID}}</td>
-                    <td>{{.Name}}</td>
-                    <td>{{.Address}}</td>
-                    <td>{{.CreatedAt.Format "02.01.2006"}}</td>
+                    <td class="col-id">{{.ID}}</td>
+                    <td class="col-name">{{.Name}}</td>
+                    <td class="col-address">{{.Address}}</td>
+                    <td class="col-created">{{.CreatedAt.Format "02.01.2006"}}</td>
                     <td class="logo-cell">
                         {{if .Logo}}
-                        <img src="{{.Logo}}" alt="Логотип" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                        <img src="{{.Logo}}" alt="Логотип" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
                         {{else}}
                         <div class="logo-placeholder"></div>
                         {{end}}
@@ -376,75 +131,103 @@
                     </td>
                 </tr>
                 {{else}}
-                <tr>
-                    
-                </tr>
+                <tr><td colspan="6" class="no-data">Магазины отсутствуют</td></tr>
                 {{end}}
             </tbody>
         </table>
-        
-        <!-- Исправленная кнопка "Назад" -->
+
         <div class="back-container">
-            <a href="/main" class="back-btn">
-                <span>←</span> Назад в навигатор
-            </a>
+            <a href="/main" class="back-btn"><span>←</span> Назад в навигатор</a>
         </div>
     </div>
 
     <script>
-        // Применение фильтров
-        document.getElementById('applyBtn').addEventListener('click', function() {
-            const sortBy = document.getElementById('sort').value;
-            const direction = document.getElementById('direction').value;
-            window.location.href = `/stores?sort=${sortBy}&direction=${direction}`;
-        });
-        
-        // Сброс фильтров
-        document.getElementById('resetBtn').addEventListener('click', function() {
-            document.getElementById('sort').value = '';
-            document.getElementById('direction').value = 'asc';
-        });
-        
-        // Сортировка по клику на заголовок
-        document.querySelectorAll('th').forEach(th => {
-            if (th.textContent === 'ID' || th.textContent === 'Название' || th.textContent === 'Дата создания') {
-                th.style.cursor = 'pointer';
-                th.addEventListener('click', function() {
-                    let sortBy = '';
-                    if (this.textContent === 'ID') sortBy = 'id';
-                    else if (this.textContent === 'Название') sortBy = 'name';
-                    else if (this.textContent === 'Дата создания') sortBy = 'created_at';
-                    
-                    const currentSort = document.getElementById('sort').value;
-                    const currentDirection = document.getElementById('direction').value;
-                    
-                    let newDirection = 'asc';
-                    if (currentSort === sortBy) {
-                        newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+        (function() {
+            const tbody = document.getElementById('storesBody');
+            const rowsInitial = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('.no-data'));
+            let rowsData = [];
+            const totalCountEl = document.getElementById('total-count');
+
+            function parseDateDMY(str) {
+                if (!str) return null;
+                const parts = str.trim().split('.');
+                if (parts.length !== 3) return null;
+                return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            }
+
+            function readInitialRows() {
+                rowsData = rowsInitial.map(row => {
+                    const id = Number(row.querySelector('.col-id')?.textContent.trim() || 0);
+                    const name = row.querySelector('.col-name')?.textContent.trim() || '';
+                    const address = row.querySelector('.col-address')?.textContent.trim() || '';
+                    const createdStr = row.querySelector('.col-created')?.textContent.trim() || '';
+                    const createdDate = parseDateDMY(createdStr);
+                    return { rowEl: row, id, name, address, createdStr, createdDate };
+                });
+                updateTotalCount();
+            }
+
+            function updateTotalCount(count) {
+                totalCountEl.textContent = count ?? rowsData.length;
+            }
+
+            function clearBody() {
+                tbody.innerHTML = '';
+            }
+
+            function renderRows(list) {
+                clearBody();
+                if (!list.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="no-data">Магазины не найдены</td></tr>';
+                    updateTotalCount(0);
+                    return;
+                }
+                const frag = document.createDocumentFragment();
+                list.forEach(item => frag.appendChild(item.rowEl));
+                tbody.appendChild(frag);
+                updateTotalCount(list.length);
+            }
+
+            function sortList(list, key, dir) {
+                const direction = dir === 'desc' ? -1 : 1;
+                return list.slice().sort((a,b) => {
+                    if (key === 'name') {
+                        const A = a.name.toLowerCase();
+                        const B = b.name.toLowerCase();
+                        return (A < B ? -1 : A > B ? 1 : 0) * direction;
+                    } else if (key === 'id') {
+                        return (a.id - b.id) * direction;
+                    } else if (key === 'created_at') {
+                        return ((a.createdDate?.getTime() || 0) - (b.createdDate?.getTime() || 0)) * direction;
                     }
-                    
-                    window.location.href = `/stores?sort=${sortBy}&direction=${newDirection}`;
+                    return 0;
                 });
             }
-        });
-        
-        // Добавляем обработчик для загрузки файлов
-        document.querySelectorAll('.top-btn[href*="/export/"]').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                // Показываем сообщение о начале загрузки
-                const originalText = this.innerHTML;
-                this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
-                this.style.opacity = '0.8';
-                this.style.cursor = 'wait';
-                
-                // Через 2 секунды возвращаем оригинальный текст
-                setTimeout(() => {
-                    this.innerHTML = originalText;
-                    this.style.opacity = '1';
-                    this.style.cursor = 'pointer';
-                }, 2000);
-            });
-        });
+
+            function applyFilterAndSort() {
+                const search = (document.getElementById('search').value || '').trim().toLowerCase();
+                const sortKey = document.getElementById('sort').value || '';
+                const direction = document.getElementById('direction').value || 'asc';
+
+                let filtered = rowsData.filter(item => {
+                    return !search || item.name.toLowerCase().includes(search) || item.address.toLowerCase().includes(search) || String(item.id).includes(search);
+                });
+
+                if (sortKey) filtered = sortList(filtered, sortKey, direction);
+                renderRows(filtered);
+            }
+
+            function resetFilters() {
+                document.getElementById('search').value = '';
+                document.getElementById('sort').value = '';
+                document.getElementById('direction').value = 'asc';
+                renderRows(rowsData.slice());
+            }
+
+            readInitialRows();
+            document.getElementById('applyBtn').addEventListener('click', applyFilterAndSort);
+            document.getElementById('resetBtn').addEventListener('click', resetFilters);
+        })();
     </script>
 </body>
 </html>

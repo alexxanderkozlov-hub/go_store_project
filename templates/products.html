@@ -1,10 +1,28 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Товары - СкладPRO</title>
     <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --success-color: #2ecc71;
+            --success-dark: #27ae60;
+            --gray-color: #95a5a6;
+            --gray-dark: #7f8c8d;
+            --text-color: #333;
+            --light-bg: #f8fafc;
+            --border-color: #e0e0e0;
+            --shadow-light: 0 1px 4px rgba(0, 0, 0, 0.05);
+            --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-blue: 0 6px 15px rgba(52, 152, 219, 0.3);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -14,7 +32,7 @@
         
         body {
             background-color: white;
-            color: #333;
+            color: var(--text-color);
             line-height: 1.6;
             padding: 30px;
         }
@@ -31,7 +49,6 @@
             font-weight: 700;
         }
         
-        /* Статистика - ОЧЕНЬ компактная */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -41,10 +58,10 @@
         
         .stat-card {
             background: white;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             padding: 12px;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e0e0e0;
+            box-shadow: var(--shadow-light);
+            border: 1px solid var(--border-color);
             min-height: 70px;
             display: flex;
             flex-direction: column;
@@ -66,16 +83,16 @@
         }
         
         .stat-value.price {
-            color: #27ae60;
+            color: var(--success-dark);
         }
         
         /* Фильтры */
         .filters {
             background: white;
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             padding: 25px;
             margin-bottom: 25px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: var(--shadow-medium);
             border: 1px solid #e8e8e8;
         }
         
@@ -102,8 +119,8 @@
         
         input, select {
             padding: 10px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
             font-size: 15px;
             background: white;
             min-width: 200px;
@@ -112,7 +129,7 @@
         
         input:focus, select:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
         
@@ -125,7 +142,7 @@
         .btn {
             padding: 12px 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             font-size: 15px;
             font-weight: 500;
             cursor: pointer;
@@ -135,28 +152,40 @@
             gap: 8px;
         }
         
-        /* Все кнопки синие */
-        .btn-apply {
-            background: linear-gradient(135deg, #3498db, #2980b9);
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
             color: white;
         }
         
-        .btn-apply:hover {
-            background: linear-gradient(135deg, #2980b9, #2573a7);
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-dark), #2573a7);
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.3);
+            box-shadow: var(--shadow-blue);
         }
         
-        /* Серые кнопки */
-        .btn-reset {
-            background: #95a5a6;
+        .btn-gray {
+            background: var(--gray-color);
             color: white;
         }
         
-        .btn-reset:hover {
-            background: #7f8c8d;
+        .btn-gray:hover {
+            background: var(--gray-dark);
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(149, 165, 166, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), var(--success-dark));
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, var(--success-dark), #219653);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        .btn-hover-lift:hover {
+            transform: translateY(-2px);
         }
         
         /* Кнопки действий */
@@ -166,13 +195,10 @@
             margin-bottom: 30px;
         }
         
-        /* Синяя кнопка добавления */
         .top-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
             padding: 14px 28px;
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             font-size: 16px;
             font-weight: 500;
@@ -181,35 +207,9 @@
             align-items: center;
             gap: 10px;
             text-decoration: none;
+            color: white;
         }
         
-        .top-btn:hover {
-            background: linear-gradient(135deg, #2980b9, #2573a7);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-        }
-        
-        /* Синяя же кнопка для вторичных действий */
-        .top-btn.secondary {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-        }
-        
-        .top-btn.secondary:hover {
-            background: linear-gradient(135deg, #2980b9, #2573a7);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-        }
-        
-        /* ЗЕЛЕНАЯ кнопка для скачивания Excel */
-        .top-btn.excel {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-        }
-        
-        .top-btn.excel:hover {
-            background: linear-gradient(135deg, #27ae60, #219653);
-            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
-        }
-        
-        /* Иконки скачивания */
         .download-icon {
             font-size: 16px;
         }
@@ -223,9 +223,9 @@
         /* Таблица */
         .table-container {
             background: white;
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: var(--shadow-medium);
             border: 1px solid #e8e8e8;
             margin-bottom: 30px;
         }
@@ -236,18 +236,42 @@
         }
         
         th {
-            background: #f8fafc;
+            background: var(--light-bg);
             color: #2c3e50;
             font-weight: 600;
             text-align: left;
             padding: 18px 20px;
-            border-bottom: 2px solid #e0e0e0;
-            border-right: 1px solid #e0e0e0;
+            border-bottom: 2px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
             font-size: 15px;
+            position: relative;
+            user-select: none;
+            cursor: default;
+        }
+        
+        th:hover {
+            background: var(--light-bg);
+        }
+        
+        th.sort-asc::after {
+            content: " ↑";
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        th.sort-desc::after {
+            content: " ↓";
+            color: var(--primary-color);
+            font-weight: bold;
         }
         
         th:last-child {
             border-right: none;
+            cursor: default;
+        }
+        
+        th:last-child:hover {
+            background: var(--light-bg);
         }
         
         td {
@@ -262,7 +286,7 @@
         }
         
         tr:hover {
-            background: #f8fafc;
+            background: var(--light-bg);
         }
         
         tr:last-child td {
@@ -270,13 +294,13 @@
         }
         
         .actions-cell {
-            width: 200px; /* Уменьшена ширина, так как осталось только 2 кнопки */
+            width: 200px; 
         }
         
         .action-btn {
             padding: 8px 16px;
             border: none;
-            border-radius: 6px;
+            border-radius: var(--radius-sm);
             font-size: 14px;
             cursor: pointer;
             margin-right: 8px;
@@ -286,6 +310,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            color: white;
         }
         
         .action-btn:hover {
@@ -293,30 +318,10 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
-        /* Синие кнопки действий */
-        .btn-edit {
-            background: #3498db;
-            color: white;
-        }
-        
-        .btn-edit:hover {
-            background: #2980b9;
-        }
-        
-        /* Серые кнопки удаления */
-        .btn-delete {
-            background: #95a5a6;
-            color: white;
-        }
-        
-        .btn-delete:hover {
-            background: #7f8c8d;
-        }
-        
         /* Цены */
         .price {
             font-weight: 600;
-            color: #27ae60;
+            color: var(--success-dark);
             font-size: 16px;
         }
         
@@ -332,15 +337,20 @@
             background: #f8f9fa;
             padding: 4px 8px;
             border-radius: 4px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--border-color);
             display: inline-block;
+        }
+        
+        .sku-empty {
+            color: var(--gray-color);
+            font-style: italic;
         }
         
         /* Футер таблицы */
         .table-footer {
-            background: #f8fafc;
+            background: var(--light-bg);
             padding: 15px 20px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -348,18 +358,16 @@
             font-size: 14px;
         }
         
-        /* Навигация */
+        /* Назад */
         .back-container {
             text-align: center;
             margin-top: 40px;
         }
         
         .back-btn {
-            background: #3498db;
-            color: white;
             padding: 14px 32px;
             border: none;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
@@ -368,12 +376,7 @@
             align-items: center;
             gap: 10px;
             transition: all 0.3s ease;
-        }
-        
-        .back-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+            color: white;
         }
         
         /* Адаптивность */
@@ -406,7 +409,8 @@
                 padding: 15px;
             }
             
-            .top-buttons {
+            .top-buttons,
+            .filter-buttons {
                 flex-direction: column;
             }
             
@@ -438,11 +442,26 @@
             .stat-value {
                 font-size: 16px;
             }
+            
+            .table-footer {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
         }
         
         @media (max-width: 480px) {
             .stats-container {
                 grid-template-columns: 1fr;
+            }
+            
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group label {
+                margin-bottom: 5px;
             }
         }
     </style>
@@ -451,27 +470,27 @@
     <div class="container">
         <h1 class="page-title">Товары</h1>
         
-        <!-- Статистика - ОЧЕНЬ компактная -->
+        <!-- Статистика -->
         <div class="stats-container">
             <div class="stat-card">
                 <div class="stat-title">Всего товаров</div>
-                <div class="stat-value">{{.total_count}}</div>
+                <div class="stat-value" id="total-count">{{if .total_count}}{{.total_count}}{{else}}0{{end}}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-title">Средняя цена</div>
-                <div class="stat-value price">{{.average_price}}</div>
+                <div class="stat-value price" id="average-price">{{if .average_price}}{{printf "%.2f" .average_price}}{{else}}0.00{{end}}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-title">Минимальная цена</div>
-                <div class="stat-value price">{{.min_price}}</div>
+                <div class="stat-value price" id="min-price">{{if .min_price}}{{printf "%.2f" .min_price}}{{else}}0.00{{end}}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-title">Максимальная цена</div>
-                <div class="stat-value price">{{.max_price}}</div>
+                <div class="stat-value price" id="max-price">{{if .max_price}}{{printf "%.2f" .max_price}}{{else}}0.00{{end}}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-title">Общая стоимость</div>
-                <div class="stat-value price">{{.total_value}}</div>
+                <div class="stat-value price" id="total-value">{{if .total_value}}{{printf "%.2f" .total_value}}{{else}}0.00{{end}}</div>
             </div>
         </div>
         
@@ -486,6 +505,7 @@
                 <div class="filter-group">
                     <label for="sort">Сортировать по:</label>
                     <select id="sort">
+                        <option value="">Без сортировки</option>
                         <option value="id" {{if eq .sort_by "id"}}selected{{end}}>ID</option>
                         <option value="name" {{if eq .sort_by "name"}}selected{{end}}>Названию</option>
                         <option value="price" {{if eq .sort_by "price"}}selected{{end}}>Цене</option>
@@ -503,10 +523,10 @@
             </div>
             
             <div class="filter-buttons">
-                <button class="btn btn-apply" id="applyBtn">
+                <button class="btn btn-primary btn-hover-lift" id="applyBtn">
                     Применить фильтры
                 </button>
-                <button class="btn btn-reset" id="resetBtn">
+                <button class="btn btn-gray btn-hover-lift" id="resetBtn">
                     Сбросить фильтры
                 </button>
             </div>
@@ -514,31 +534,31 @@
         
         <!-- Кнопки действий -->
         <div class="top-buttons">
-            <button class="top-btn" onclick="window.location.href='/products/create'">
+            <button class="top-btn btn-primary btn-hover-lift" onclick="window.location.href='/products/create'">
                 Добавить товар
             </button>
-            <a href="/export/txt?type=products" class="top-btn secondary" id="downloadTxtBtn">
+            <a href="/export/txt?type=products" class="top-btn btn-primary btn-hover-lift" id="downloadTxtBtn">
                 <span class="download-icon">📄</span> Скачать TXT
             </a>
-            <a href="/export/csv?type=products" class="top-btn excel" id="downloadExcelBtn">
+            <a href="/export/csv?type=products" class="top-btn btn-success btn-hover-lift" id="downloadExcelBtn">
                 <span class="download-icon">📊</span> Скачать XLSX
             </a>
         </div>
         
         <!-- Таблица товаров -->
         <div class="table-container">
-            <table>
+            <table id="productsTable">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Название</th>
-                        <th>Цена</th>
-                        <th>Описание</th>
-                        <th>Артикул</th>
+                        <th> ID </th>
+                        <th> Название </th>
+                        <th> Цена </th>
+                        <th> Описание </th>
+                        <th> Артикул </th>
                         <th class="actions-cell">Действия</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="productsTableBody">
                     {{range .products}}
                     <tr>
                         <td>{{.ID}}</td>
@@ -549,18 +569,24 @@
                             {{if .SKU}}
                             <span class="sku">{{.SKU}}</span>
                             {{else}}
-                            <span class="sku" style="color: #95a5a6; font-style: italic;">Не указан</span>
+                            <span class="sku sku-empty">Не указан</span>
                             {{end}}
                         </td>
                         <td class="actions-cell">
-                            <button class="action-btn btn-edit" 
+                            <button class="action-btn btn-primary" 
                                     onclick="window.location.href='/products/{{.ID}}/edit'">
                                 Редактировать
                             </button>
-                            <button class="action-btn btn-delete" 
+                            <button class="action-btn btn-gray" 
                                     onclick="if(confirm('Удалить товар \'{{.Name}}\'?')) window.location.href='/products/{{.ID}}/delete'">
                                 Удалить
                             </button>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                            Товары отсутствуют
                         </td>
                     </tr>
                     {{end}}
@@ -569,8 +595,8 @@
             
             {{if .products}}
             <div class="table-footer">
-                <div>Показано товаров: <strong>{{.total_count}}</strong></div>
-                <div>
+                <div>Показано товаров: <strong id="visible-count">{{len .products}}</strong></div>
+                <div id="sorting-info">
                     {{if .sort_by}}
                     Сортировка: 
                     {{if eq .sort_by "id"}}ID{{end}}
@@ -588,75 +614,323 @@
         
         <!-- Назад -->
         <div class="back-container">
-            <button class="back-btn" onclick="window.location.href='/main'">
+            <button class="back-btn btn-primary btn-hover-lift" onclick="window.location.href='/main'">
                 Назад в навигатор
             </button>
         </div>
     </div>
 
     <script>
-        // Применение фильтров
-        document.getElementById('applyBtn').addEventListener('click', applyFilters);
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            window.location.href = '/products';
-        });
-        
-        // Поиск при нажатии Enter
-        document.getElementById('search').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') applyFilters();
-        });
-        
-        function applyFilters() {
-            const search = document.getElementById('search').value;
-            const sort = document.getElementById('sort').value;
-            const direction = document.getElementById('direction').value;
+        // Утилитарные функции
+        const Utils = {
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            },
             
-            let url = '/products?';
-            if (search) url += `search=${encodeURIComponent(search)}&`;
-            if (sort) url += `sort=${sort}&`;
-            if (direction) url += `direction=${direction}`;
+            escapeJs(text) {
+                return String(text).replace(/'/g, "\\'");
+            },
             
-            // Убираем последний & если есть
-            if (url.endsWith('&')) url = url.slice(0, -1);
+            formatPrice(price) {
+                return Number(price || 0).toFixed(2);
+            }
+        };
+
+        // Менеджер состояния
+        const StateManager = {
+            originalProducts: [],
+            currentSort: {
+                field: '{{.sort_by}}' || '',
+                direction: '{{.direction}}' || 'asc'
+            },
+            currentSearch: '{{.search_query}}' || '',
             
-            window.location.href = url;
-        }
-        
-        // Добавляем обработчики для кнопок скачивания
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('a[href*="/export/"]').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    // Показываем сообщение о начале загрузки
-                    const originalText = this.innerHTML;
-                    const originalHref = this.href;
+            saveOriginalData() {
+                const rows = document.querySelectorAll('#productsTableBody tr');
+                this.originalProducts = [];
+                
+                rows.forEach(row => {
+                    if (row.querySelector('td[colspan]')) return;
                     
-                    // Добавляем текущие параметры фильтров к URL
-                    const search = document.getElementById('search').value;
-                    const sort = document.getElementById('sort').value;
-                    const direction = document.getElementById('direction').value;
-                    
-                    let exportUrl = originalHref;
-                    if (search) exportUrl += `&search=${encodeURIComponent(search)}`;
-                    if (sort) exportUrl += `&sort=${sort}`;
-                    if (direction) exportUrl += `&direction=${direction}`;
-                    
-                    this.href = exportUrl;
-                    
-                    this.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
-                    this.classList.add('loading');
-                    
-                    // Через 2 секунды возвращаем оригинальный текст
-                    setTimeout(() => {
-                        this.innerHTML = originalText;
-                        this.classList.remove('loading');
-                        this.href = originalHref; // Возвращаем оригинальный href
-                    }, 2000);
+                    this.originalProducts.push({
+                        ID: parseInt(row.cells[0]?.textContent.trim() || '0'),
+                        Name: row.cells[1]?.querySelector('strong')?.textContent || '',
+                        Price: parseFloat(row.cells[2]?.querySelector('.price')?.textContent || '0'),
+                        Description: row.cells[3]?.textContent || '',
+                        SKU: row.cells[4]?.querySelector('.sku')?.textContent.trim() || ''
+                    });
                 });
-            });
+            },
+            
+            updateSortingInfo() {
+                const sortInfo = document.getElementById('sorting-info');
+                if (!sortInfo) return;
+                
+                if (this.currentSort.field) {
+                    const fieldMap = {
+                        'id': 'ID',
+                        'name': 'Названию',
+                        'price': 'Цене',
+                        'sku': 'Артикулу'
+                    };
+                    
+                    const fieldText = fieldMap[this.currentSort.field] || this.currentSort.field;
+                    const directionText = this.currentSort.direction === 'asc' ? 'по возрастанию' : 'по убыванию';
+                    sortInfo.textContent = `Сортировка: ${fieldText} (${directionText})`;
+                } else {
+                    sortInfo.textContent = 'Без сортировки';
+                }
+            }
+        };
+
+        // Менеджер данных
+        const DataManager = {
+            filterProducts(products, searchQuery) {
+                if (!searchQuery?.trim()) return products;
+                
+                const searchLower = searchQuery.toLowerCase().trim();
+                return products.filter(product => {
+                    return (product.Name?.toLowerCase() || '').includes(searchLower) ||
+                           (product.Description?.toLowerCase() || '').includes(searchLower) ||
+                           (product.SKU?.toLowerCase() || '').includes(searchLower) ||
+                           product.ID?.toString().includes(searchLower);
+                });
+            },
+            
+            sortProducts(products, field, direction) {
+                if (!field) return [...products];
+                
+                return [...products].sort((a, b) => {
+                    let aValue, bValue;
+                    
+                    switch(field) {
+                        case 'id': aValue = a.ID; bValue = b.ID; break;
+                        case 'name': aValue = (a.Name || '').toLowerCase(); bValue = (b.Name || '').toLowerCase(); break;
+                        case 'price': aValue = a.Price || 0; bValue = b.Price || 0; break;
+                        case 'sku': aValue = (a.SKU || '').toLowerCase(); bValue = (b.SKU || '').toLowerCase(); break;
+                        default: return 0;
+                    }
+                    
+                    let comparison = 0;
+                    if (aValue < bValue) comparison = -1;
+                    if (aValue > bValue) comparison = 1;
+                    return direction === 'desc' ? comparison * -1 : comparison;
+                });
+            },
+            
+            calculateStatistics(products) {
+                if (!products.length) {
+                    this.updateStatElements(0, 0, 0, 0, 0);
+                    return;
+                }
+                
+                const prices = products.map(p => p.Price || 0);
+                const totalValue = prices.reduce((sum, price) => sum + price, 0);
+                const totalCount = products.length;
+                const averagePrice = totalValue / totalCount;
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                
+                this.updateStatElements(totalCount, averagePrice, minPrice, maxPrice, totalValue);
+            },
+            
+            updateStatElements(count, avg, min, max, total) {
+                const elements = {
+                    'total-count': count.toString(),
+                    'average-price': Utils.formatPrice(avg),
+                    'min-price': Utils.formatPrice(min),
+                    'max-price': Utils.formatPrice(max),
+                    'total-value': Utils.formatPrice(total),
+                    'visible-count': count.toString()
+                };
+                
+                Object.entries(elements).forEach(([id, value]) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value;
+                });
+            }
+        };
+
+        // Менеджер интерфейса
+        const UIManager = {
+            updateTable() {
+                const tbody = document.getElementById('productsTableBody');
+                if (!tbody) return;
+                
+                // Фильтрация и сортировка
+                let products = DataManager.filterProducts(
+                    StateManager.originalProducts, 
+                    StateManager.currentSearch
+                );
+                products = DataManager.sortProducts(
+                    products, 
+                    StateManager.currentSort.field, 
+                    StateManager.currentSort.direction
+                );
+                
+                // Очистка и рендеринг
+                tbody.innerHTML = '';
+                
+                if (!products.length) {
+                    this.renderEmptyState(tbody);
+                } else {
+                    this.renderProducts(tbody, products);
+                }
+                
+                // Обновление статистики и информации о сортировке
+                DataManager.calculateStatistics(products);
+                StateManager.updateSortingInfo();
+            },
+            
+            renderEmptyState(tbody) {
+                const message = StateManager.currentSearch ? 'Товары не найдены' : 'Товары отсутствуют';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                            ${message}
+                        </td>
+                    </tr>
+                `;
+            },
+            
+            renderProducts(tbody, products) {
+                const fragment = document.createDocumentFragment();
+                
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = this.getProductRowHTML(product);
+                    fragment.appendChild(row);
+                });
+                
+                tbody.appendChild(fragment);
+            },
+            
+            getProductRowHTML(product) {
+                const skuHTML = product.SKU 
+                    ? `<span class="sku">${Utils.escapeHtml(product.SKU)}</span>`
+                    : '<span class="sku sku-empty">Не указан</span>';
+                
+                return `
+                    <td>${product.ID}</td>
+                    <td><strong>${Utils.escapeHtml(product.Name || '')}</strong></td>
+                    <td><span class="price">${Utils.formatPrice(product.Price)}</span></td>
+                    <td>${Utils.escapeHtml(product.Description || '')}</td>
+                    <td>${skuHTML}</td>
+                    <td class="actions-cell">
+                        <button class="action-btn btn-primary" 
+                                onclick="window.location.href='/products/${product.ID}/edit'">
+                            Редактировать
+                        </button>
+                        <button class="action-btn btn-gray" 
+                                onclick="if(confirm('Удалить товар \\'${Utils.escapeJs(product.Name || '')}\\'?')) window.location.href='/products/${product.ID}/delete'">
+                            Удалить
+                        </button>
+                    </td>
+                `;
+            },
+            
+            handleExportClick(e) {
+                const btn = e.target.closest('a[href*="/export/"]');
+                if (!btn) return;
+                
+                e.preventDefault();
+                
+                const originalText = btn.innerHTML;
+                const originalHref = btn.getAttribute('href');
+                
+                // Добавление параметров фильтрации к URL
+                const search = document.getElementById('search')?.value || '';
+                const sort = document.getElementById('sort')?.value || '';
+                const direction = document.getElementById('direction')?.value || 'asc';
+                
+                let exportUrl = originalHref;
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (sort) params.append('sort', sort);
+                if (direction) params.append('direction', direction);
+                
+                if (params.toString()) {
+                    exportUrl += (exportUrl.includes('?') ? '&' : '?') + params.toString();
+                }
+                
+                // Визуальная обратная связь
+                btn.innerHTML = '<span class="download-icon">⏳</span> Подготовка файла...';
+                btn.classList.add('loading');
+                
+                // Скачивание файла
+                setTimeout(() => {
+                    window.location.href = exportUrl;
+                    
+                    // Восстановление кнопки
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.remove('loading');
+                    }, 2000);
+                }, 500);
+            }
+        };
+
+        // Обработчики событий
+        const EventHandlers = {
+            applyFilters() {
+                StateManager.currentSearch = document.getElementById('search')?.value || '';
+                StateManager.currentSort.field = document.getElementById('sort')?.value || '';
+                StateManager.currentSort.direction = document.getElementById('direction')?.value || 'asc';
+                UIManager.updateTable();
+            },
+            
+            resetFilters() {
+                document.getElementById('search').value = '';
+                document.getElementById('sort').value = '';
+                document.getElementById('direction').value = 'asc';
+                
+                StateManager.currentSearch = '';
+                StateManager.currentSort.field = '';
+                StateManager.currentSort.direction = 'asc';
+                
+                UIManager.updateTable();
+            },
+            
+            initEventListeners() {
+                document.getElementById('applyBtn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.applyFilters();
+                });
+                
+                document.getElementById('resetBtn')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.resetFilters();
+                });
+                
+                document.addEventListener('click', (e) => UIManager.handleExportClick(e));
+                
+                // Дебаунс для поиска (опционально)
+                const searchInput = document.getElementById('search');
+                if (searchInput) {
+                    let searchTimeout;
+                    searchInput.addEventListener('input', () => {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(() => {
+                            this.applyFilters();
+                        }, 500);
+                    });
+                }
+                
+                // Автофокус на поле поиска
+                searchInput?.focus();
+            }
+        };
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            StateManager.saveOriginalData();
+            EventHandlers.initEventListeners();
+            
+            // Инициализация статистики
+            DataManager.calculateStatistics(StateManager.originalProducts);
         });
-        
-        // Автофокус на поле поиска
-        document.getElementById('search').focus();
     </script>
 </body>
 </html>
