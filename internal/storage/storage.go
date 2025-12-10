@@ -1,408 +1,728 @@
 package storage
 
 import (
-	"sync"
+	"database/sql"
+	"fmt"
+	"log"
 	"time"
 
+	"go_store_project/config"
 	"go_store_project/internal/models"
+
+	_ "github.com/lib/pq"
 )
+
+type Storage struct {
+	db *sql.DB
+}
 
 var (
-	stores     = make(map[int]models.Store)
-	suppliers  = make(map[int]models.Supplier)
-	products   = make(map[int]models.Product)
-	categories = make(map[int]models.Category)
-	supplies   = make(map[int]models.Supply)
-	users      = make(map[int]models.User)
-	mu         sync.RWMutex
+	storageInstance *Storage
 )
 
+// Инициализация хранилища
 func Init() {
-	mu.Lock()
-	defer mu.Unlock()
-	// Хранилище инициализируется пустым
+	cfg := config.Load()
+
+	connStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName,
+	)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatalf("Failed to open database: %v", err)
+	}
+
+	if err = db.Ping(); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	storageInstance = &Storage{db: db}
+
+	// Инициализация таблиц
+	if err := storageInstance.initTables(); err != nil {
+		log.Fatalf("Failed to initialize database tables: %v", err)
+	}
+
+	log.Println("Connected to PostgreSQL database")
+}
+
+func (s *Storage) initTables() error {
+	queries := []string{
+		// Таблица магазинов
+		`CREATE TABLE IF NOT EXISTS stores (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            address TEXT,
+            logo TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+		// Таблица категорий
+		`CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            description TEXT
+        )`,
+
+		// Таблица поставщиков
+		`CREATE TABLE IF NOT EXISTS suppliers (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            phone VARCHAR(20),
+            email VARCHAR(100),
+            address TEXT
+        )`,
+
+		// Таблица продуктов
+		`CREATE TABLE IF NOT EXISTS products (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            description TEXT,
+            photo TEXT,
+            category_id INTEGER REFERENCES categories(id),
+            sku VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+		// Таблица пользователей
+		`CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL
+        )`,
+
+		// Таблица поставок
+		`CREATE TABLE IF NOT EXISTS supplies (
+            id SERIAL PRIMARY KEY,
+            supplier_id INTEGER REFERENCES suppliers(id),
+            product_id INTEGER REFERENCES products(id),
+            quantity INTEGER NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            total DECIMAL(10,2) GENERATED ALWAYS AS (quantity * price) STORED,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(20) DEFAULT 'pending',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+	}
+
+	for _, query := range queries {
+		_, err := s.db.Exec(query)
+		if err != nil {
+			return fmt.Errorf("failed to create table: %w", err)
+		}
+	}
+
+	// Создаем начального пользователя, если таблица пуста
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	if err == nil && count == 0 {
+		// Пароль: admin123
+		_, err = s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)",
+			"admin", "admin123")
+		if err != nil {
+			log.Printf("Warning: failed to create default user: %v", err)
+		}
+	}
+
+	return nil
 }
 
 // Store operations
 func GetAllStores() []models.Store {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	storeList := make([]models.Store, 0, len(stores))
-	for _, store := range stores {
-		storeList = append(storeList, store)
+	if storageInstance == nil {
+		return []models.Store{}
 	}
 
-	return storeList
+	rows, err := storageInstance.db.Query(`
+        SELECT id, name, address, logo, created_at 
+        FROM stores 
+        ORDER BY created_at DESC
+    `)
+	if err != nil {
+		log.Printf("Error getting stores: %v", err)
+		return []models.Store{}
+	}
+	defer rows.Close()
+
+	var stores []models.Store
+	for rows.Next() {
+		var store models.Store
+		if err := rows.Scan(&store.ID, &store.Name, &store.Address,
+			&store.Logo, &store.CreatedAt); err != nil {
+			log.Printf("Error scanning store: %v", err)
+			continue
+		}
+		stores = append(stores, store)
+	}
+
+	return stores
 }
 
 func GetStore(id int) (models.Store, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
+	if storageInstance == nil {
+		return models.Store{}, false
+	}
 
-	store, exists := stores[id]
-	return store, exists
+	var store models.Store
+	err := storageInstance.db.QueryRow(`
+        SELECT id, name, address, logo, created_at 
+        FROM stores WHERE id = $1
+    `, id).Scan(&store.ID, &store.Name, &store.Address, &store.Logo, &store.CreatedAt)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Error getting store: %v", err)
+		}
+		return models.Store{}, false
+	}
+
+	return store, true
 }
 
 func CreateStore(store models.Store) int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newID := 1
-	for {
-		if _, exists := stores[newID]; !exists {
-			break
-		}
-		newID++
+	if storageInstance == nil {
+		return 0
 	}
 
-	store.ID = newID
-	store.CreatedAt = time.Now()
-	stores[newID] = store
+	var id int
+	err := storageInstance.db.QueryRow(`
+        INSERT INTO stores (name, address, logo, created_at) 
+        VALUES ($1, $2, $3, $4) 
+        RETURNING id
+    `, store.Name, store.Address, store.Logo, time.Now()).Scan(&id)
 
-	return newID
+	if err != nil {
+		log.Printf("Error creating store: %v", err)
+		return 0
+	}
+
+	return id
 }
 
 func UpdateStore(id int, store models.Store) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := stores[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	store.ID = id
-	stores[id] = store
-	return true
+	result, err := storageInstance.db.Exec(`
+        UPDATE stores 
+        SET name = $1, address = $2, logo = $3 
+        WHERE id = $4
+    `, store.Name, store.Address, store.Logo, id)
+
+	if err != nil {
+		log.Printf("Error updating store: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 func DeleteStore(id int) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := stores[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	delete(stores, id)
-	return true
+	result, err := storageInstance.db.Exec("DELETE FROM stores WHERE id = $1", id)
+	if err != nil {
+		log.Printf("Error deleting store: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 // Category operations
 func GetAllCategories() []models.Category {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	categoryList := make([]models.Category, 0, len(categories))
-	for _, cat := range categories {
-		categoryList = append(categoryList, cat)
+	if storageInstance == nil {
+		return []models.Category{}
 	}
 
-	return categoryList
+	rows, err := storageInstance.db.Query(`
+        SELECT id, name, description 
+        FROM categories 
+        ORDER BY name
+    `)
+	if err != nil {
+		log.Printf("Error getting categories: %v", err)
+		return []models.Category{}
+	}
+	defer rows.Close()
+
+	var categories []models.Category
+	for rows.Next() {
+		var category models.Category
+		if err := rows.Scan(&category.ID, &category.Name, &category.Description); err != nil {
+			log.Printf("Error scanning category: %v", err)
+			continue
+		}
+		categories = append(categories, category)
+	}
+
+	return categories
 }
 
 func GetCategory(id int) (models.Category, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
+	if storageInstance == nil {
+		return models.Category{}, false
+	}
 
-	category, exists := categories[id]
-	return category, exists
+	var category models.Category
+	err := storageInstance.db.QueryRow(`
+        SELECT id, name, description 
+        FROM categories WHERE id = $1
+    `, id).Scan(&category.ID, &category.Name, &category.Description)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Error getting category: %v", err)
+		}
+		return models.Category{}, false
+	}
+
+	return category, true
 }
 
 func CreateCategory(category models.Category) int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newID := 1
-	for {
-		if _, exists := categories[newID]; !exists {
-			break
-		}
-		newID++
+	if storageInstance == nil {
+		return 0
 	}
 
-	category.ID = newID
-	categories[newID] = category
+	var id int
+	err := storageInstance.db.QueryRow(`
+        INSERT INTO categories (name, description) 
+        VALUES ($1, $2) 
+        RETURNING id
+    `, category.Name, category.Description).Scan(&id)
 
-	return newID
+	if err != nil {
+		log.Printf("Error creating category: %v", err)
+		return 0
+	}
+
+	return id
 }
 
 func UpdateCategory(id int, category models.Category) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := categories[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	category.ID = id
-	categories[id] = category
-	return true
+	result, err := storageInstance.db.Exec(`
+        UPDATE categories 
+        SET name = $1, description = $2 
+        WHERE id = $3
+    `, category.Name, category.Description, id)
+
+	if err != nil {
+		log.Printf("Error updating category: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 func DeleteCategory(id int) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := categories[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	delete(categories, id)
-	return true
+	result, err := storageInstance.db.Exec("DELETE FROM categories WHERE id = $1", id)
+	if err != nil {
+		log.Printf("Error deleting category: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 // Product operations
 func GetAllProducts() []models.Product {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	productList := make([]models.Product, 0, len(products))
-	for _, prod := range products {
-		productList = append(productList, prod)
+	if storageInstance == nil {
+		return []models.Product{}
 	}
 
-	return productList
+	rows, err := storageInstance.db.Query(`
+        SELECT id, name, price, description, photo, category_id, sku, created_at 
+        FROM products 
+        ORDER BY created_at DESC
+    `)
+	if err != nil {
+		log.Printf("Error getting products: %v", err)
+		return []models.Product{}
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		var product models.Product
+		if err := rows.Scan(&product.ID, &product.Name, &product.Price,
+			&product.Description, &product.Photo, &product.CategoryID,
+			&product.SKU, &product.CreatedAt); err != nil {
+			log.Printf("Error scanning product: %v", err)
+			continue
+		}
+		products = append(products, product)
+	}
+
+	return products
 }
 
 func GetProduct(id int) (models.Product, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
+	if storageInstance == nil {
+		return models.Product{}, false
+	}
 
-	product, exists := products[id]
-	return product, exists
+	var product models.Product
+	err := storageInstance.db.QueryRow(`
+        SELECT id, name, price, description, photo, category_id, sku, created_at 
+        FROM products WHERE id = $1
+    `, id).Scan(&product.ID, &product.Name, &product.Price, &product.Description,
+		&product.Photo, &product.CategoryID, &product.SKU, &product.CreatedAt)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Error getting product: %v", err)
+		}
+		return models.Product{}, false
+	}
+
+	return product, true
 }
 
 func CreateProduct(product models.Product) int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newID := 1
-	for {
-		if _, exists := products[newID]; !exists {
-			break
-		}
-		newID++
+	if storageInstance == nil {
+		return 0
 	}
 
-	product.ID = newID
-	product.CreatedAt = time.Now()
-	products[newID] = product
+	var id int
+	err := storageInstance.db.QueryRow(`
+        INSERT INTO products (name, price, description, photo, category_id, sku, created_at) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) 
+        RETURNING id
+    `, product.Name, product.Price, product.Description, product.Photo,
+		product.CategoryID, product.SKU, time.Now()).Scan(&id)
 
-	return newID
+	if err != nil {
+		log.Printf("Error creating product: %v", err)
+		return 0
+	}
+
+	return id
 }
 
 func UpdateProduct(id int, product models.Product) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := products[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	product.ID = id
-	products[id] = product
-	return true
+	result, err := storageInstance.db.Exec(`
+        UPDATE products 
+        SET name = $1, price = $2, description = $3, 
+            photo = $4, category_id = $5, sku = $6 
+        WHERE id = $7
+    `, product.Name, product.Price, product.Description,
+		product.Photo, product.CategoryID, product.SKU, id)
+
+	if err != nil {
+		log.Printf("Error updating product: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 func DeleteProduct(id int) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := products[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	delete(products, id)
-	return true
+	result, err := storageInstance.db.Exec("DELETE FROM products WHERE id = $1", id)
+	if err != nil {
+		log.Printf("Error deleting product: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 // Supplier operations
 func GetAllSuppliers() []models.Supplier {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	supplierList := make([]models.Supplier, 0, len(suppliers))
-	for _, sup := range suppliers {
-		supplierList = append(supplierList, sup)
+	if storageInstance == nil {
+		return []models.Supplier{}
 	}
 
-	return supplierList
+	rows, err := storageInstance.db.Query(`
+        SELECT id, name, phone, email, address 
+        FROM suppliers 
+        ORDER BY name
+    `)
+	if err != nil {
+		log.Printf("Error getting suppliers: %v", err)
+		return []models.Supplier{}
+	}
+	defer rows.Close()
+
+	var suppliers []models.Supplier
+	for rows.Next() {
+		var supplier models.Supplier
+		if err := rows.Scan(&supplier.ID, &supplier.Name, &supplier.Phone,
+			&supplier.Email, &supplier.Address); err != nil {
+			log.Printf("Error scanning supplier: %v", err)
+			continue
+		}
+		suppliers = append(suppliers, supplier)
+	}
+
+	return suppliers
 }
 
 func GetSupplier(id int) (models.Supplier, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
+	if storageInstance == nil {
+		return models.Supplier{}, false
+	}
 
-	supplier, exists := suppliers[id]
-	return supplier, exists
+	var supplier models.Supplier
+	err := storageInstance.db.QueryRow(`
+        SELECT id, name, phone, email, address 
+        FROM suppliers WHERE id = $1
+    `, id).Scan(&supplier.ID, &supplier.Name, &supplier.Phone,
+		&supplier.Email, &supplier.Address)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Error getting supplier: %v", err)
+		}
+		return models.Supplier{}, false
+	}
+
+	return supplier, true
 }
 
 func CreateSupplier(supplier models.Supplier) int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newID := 1
-	for {
-		if _, exists := suppliers[newID]; !exists {
-			break
-		}
-		newID++
+	if storageInstance == nil {
+		return 0
 	}
 
-	supplier.ID = newID
-	suppliers[newID] = supplier
+	var id int
+	err := storageInstance.db.QueryRow(`
+        INSERT INTO suppliers (name, phone, email, address) 
+        VALUES ($1, $2, $3, $4) 
+        RETURNING id
+    `, supplier.Name, supplier.Phone, supplier.Email, supplier.Address).Scan(&id)
 
-	return newID
+	if err != nil {
+		log.Printf("Error creating supplier: %v", err)
+		return 0
+	}
+
+	return id
 }
 
 func UpdateSupplier(id int, supplier models.Supplier) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := suppliers[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	supplier.ID = id
-	suppliers[id] = supplier
-	return true
+	result, err := storageInstance.db.Exec(`
+        UPDATE suppliers 
+        SET name = $1, phone = $2, email = $3, address = $4 
+        WHERE id = $5
+    `, supplier.Name, supplier.Phone, supplier.Email, supplier.Address, id)
+
+	if err != nil {
+		log.Printf("Error updating supplier: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 func DeleteSupplier(id int) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := suppliers[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	delete(suppliers, id)
-	return true
+	result, err := storageInstance.db.Exec("DELETE FROM suppliers WHERE id = $1", id)
+	if err != nil {
+		log.Printf("Error deleting supplier: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 // Supply operations
 func GetAllSupplies() []models.Supply {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	supplyList := make([]models.Supply, 0, len(supplies))
-	for _, sup := range supplies {
-		supplyList = append(supplyList, sup)
+	if storageInstance == nil {
+		return []models.Supply{}
 	}
 
-	return supplyList
+	rows, err := storageInstance.db.Query(`
+        SELECT id, supplier_id, product_id, quantity, price, 
+               total, date, status, notes, created_at 
+        FROM supplies 
+        ORDER BY created_at DESC
+    `)
+	if err != nil {
+		log.Printf("Error getting supplies: %v", err)
+		return []models.Supply{}
+	}
+	defer rows.Close()
+
+	var supplies []models.Supply
+	for rows.Next() {
+		var supply models.Supply
+		if err := rows.Scan(&supply.ID, &supply.SupplierID, &supply.ProductID,
+			&supply.Quantity, &supply.Price, &supply.Total, &supply.Date,
+			&supply.Status, &supply.Notes, &supply.CreatedAt); err != nil {
+			log.Printf("Error scanning supply: %v", err)
+			continue
+		}
+		supplies = append(supplies, supply)
+	}
+
+	return supplies
 }
 
 func GetSupply(id int) (models.Supply, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
+	if storageInstance == nil {
+		return models.Supply{}, false
+	}
 
-	supply, exists := supplies[id]
-	return supply, exists
+	var supply models.Supply
+	err := storageInstance.db.QueryRow(`
+        SELECT id, supplier_id, product_id, quantity, price, 
+               total, date, status, notes, created_at 
+        FROM supplies WHERE id = $1
+    `, id).Scan(&supply.ID, &supply.SupplierID, &supply.ProductID,
+		&supply.Quantity, &supply.Price, &supply.Total, &supply.Date,
+		&supply.Status, &supply.Notes, &supply.CreatedAt)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Error getting supply: %v", err)
+		}
+		return models.Supply{}, false
+	}
+
+	return supply, true
 }
 
 func CreateSupply(supply models.Supply) int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newID := 1
-	for {
-		if _, exists := supplies[newID]; !exists {
-			break
-		}
-		newID++
+	if storageInstance == nil {
+		return 0
 	}
 
-	supply.ID = newID
-	supply.CreatedAt = time.Now()
-	supplies[newID] = supply
+	var id int
+	err := storageInstance.db.QueryRow(`
+        INSERT INTO supplies (supplier_id, product_id, quantity, price, 
+                              date, status, notes, created_at) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        RETURNING id
+    `, supply.SupplierID, supply.ProductID, supply.Quantity, supply.Price,
+		supply.Date, supply.Status, supply.Notes, time.Now()).Scan(&id)
 
-	return newID
+	if err != nil {
+		log.Printf("Error creating supply: %v", err)
+		return 0
+	}
+
+	return id
 }
 
 func UpdateSupply(id int, supply models.Supply) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := supplies[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	supply.ID = id
-	supplies[id] = supply
-	return true
+	result, err := storageInstance.db.Exec(`
+        UPDATE supplies 
+        SET supplier_id = $1, product_id = $2, quantity = $3, 
+            price = $4, date = $5, status = $6, notes = $7 
+        WHERE id = $8
+    `, supply.SupplierID, supply.ProductID, supply.Quantity,
+		supply.Price, supply.Date, supply.Status, supply.Notes, id)
+
+	if err != nil {
+		log.Printf("Error updating supply: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 func DeleteSupply(id int) bool {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if _, exists := supplies[id]; !exists {
+	if storageInstance == nil {
 		return false
 	}
 
-	delete(supplies, id)
-	return true
+	result, err := storageInstance.db.Exec("DELETE FROM supplies WHERE id = $1", id)
+	if err != nil {
+		log.Printf("Error deleting supply: %v", err)
+		return false
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows > 0
 }
 
 // User operations
 func CreateUser(user models.User) int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	newID := 1
-	for {
-		if _, exists := users[newID]; !exists {
-			break
-		}
-		newID++
+	if storageInstance == nil {
+		return 0
 	}
 
-	user.ID = newID
-	users[newID] = user
+	var id int
+	err := storageInstance.db.QueryRow(`
+        INSERT INTO users (username, password) 
+        VALUES ($1, $2) 
+        RETURNING id
+    `, user.Username, user.Password).Scan(&id)
 
-	return newID
+	if err != nil {
+		log.Printf("Error creating user: %v", err)
+		return 0
+	}
+
+	return id
 }
 
 func GetUserByUsername(username string) (models.User, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	for _, user := range users {
-		if user.Username == username {
-			return user, true
-		}
+	if storageInstance == nil {
+		return models.User{}, false
 	}
-	return models.User{}, false
+
+	var user models.User
+	err := storageInstance.db.QueryRow(`
+        SELECT id, username, password 
+        FROM users WHERE username = $1
+    `, username).Scan(&user.ID, &user.Username, &user.Password)
+
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("Error getting user: %v", err)
+		}
+		return models.User{}, false
+	}
+
+	return user, true
 }
 
 // Get all data for export
-func GetAllData() (map[int]models.Store, map[int]models.Supplier, map[int]models.Product, map[int]models.Category, map[int]models.Supply) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	storesCopy := make(map[int]models.Store)
-	suppliersCopy := make(map[int]models.Supplier)
-	productsCopy := make(map[int]models.Product)
-	categoriesCopy := make(map[int]models.Category)
-	suppliesCopy := make(map[int]models.Supply)
-
-	for k, v := range stores {
-		storesCopy[k] = v
-	}
-	for k, v := range suppliers {
-		suppliersCopy[k] = v
-	}
-	for k, v := range products {
-		productsCopy[k] = v
-	}
-	for k, v := range categories {
-		categoriesCopy[k] = v
-	}
-	for k, v := range supplies {
-		suppliesCopy[k] = v
-	}
-
-	return storesCopy, suppliersCopy, productsCopy, categoriesCopy, suppliesCopy
+func GetAllData() ([]models.Store, []models.Supplier, []models.Product, []models.Category, []models.Supply) {
+	return GetAllStores(), GetAllSuppliers(), GetAllProducts(), GetAllCategories(), GetAllSupplies()
 }

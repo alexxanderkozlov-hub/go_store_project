@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	// Инициализация хранилища
+	// Инициализация хранилища (теперь подключается к PostgreSQL)
 	storage.Init()
 }
 
@@ -26,13 +26,16 @@ func main() {
 
 	port := ":8082"
 	log.Printf("🚀 Сервер запущен на http://localhost%s", port)
+	log.Printf("📊 PostgreSQL подключена")
 
 	err := r.Run(port)
 	if err != nil {
-		log.Printf("Порт 8080 занят, пробуем 8081...")
+		log.Printf("Порт 8082 занят, пробуем 8081...")
 		r.Run(":8081")
 	}
 }
+
+// Остальной код setupRoutes остается без изменений...
 
 func setupRoutes(r *gin.Engine) {
 	r.GET("/", func(c *gin.Context) {
