@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort" // Добавили импорт sort
 	"strconv"
 
 	"go_store_project/internal/models"
@@ -19,6 +20,11 @@ func CategoriesListPage(c *gin.Context) {
 	}
 
 	categoryList := storage.GetAllCategories()
+
+	// Добавили сортировку по возрастанию ID
+	sort.Slice(categoryList, func(i, j int) bool {
+		return categoryList[i].ID < categoryList[j].ID
+	})
 
 	log.Printf("DEBUG: Displaying %d categories", len(categoryList))
 

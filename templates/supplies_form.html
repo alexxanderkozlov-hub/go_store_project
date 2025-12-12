@@ -81,8 +81,7 @@
         .form-group input[type="text"],
         .form-group input[type="number"],
         .form-group input[type="date"],
-        .form-group select,
-        .form-group textarea {
+        .form-group select {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -95,17 +94,11 @@
         .form-group input[type="text"]:focus,
         .form-group input[type="number"]:focus,
         .form-group input[type="date"]:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        .form-group select:focus {
             outline: none;
             border-color: #3498db;
             background: white;
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-        
-        .form-group textarea {
-            min-height: 100px;
-            resize: vertical;
         }
         
         .required::after {
@@ -177,25 +170,6 @@
             transform: translateY(0);
         }
         
-        .form-info {
-            background: #e8f4fc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 25px;
-            font-size: 14px;
-            color: #2c3e50;
-            border-left: 4px solid #3498db;
-        }
-        
-        .form-info ul {
-            margin-left: 20px;
-            margin-top: 8px;
-        }
-        
-        .form-info li {
-            margin-bottom: 5px;
-        }
-        
         .footer {
             text-align: center;
             margin-top: 25px;
@@ -206,18 +180,19 @@
         
         /* Расчет общей стоимости */
         .total-calculation {
-            background: #e8f5e8;
+            background: #e8f4fc;
             padding: 15px;
             border-radius: 8px;
             margin-top: 10px;
             font-size: 16px;
-            color: #27ae60;
+            color: #2c3e50;
             text-align: center;
-            border: 2px solid #a3e4d7;
+            border: 2px solid #3498db;
         }
         
         .total-calculation strong {
             font-size: 18px;
+            color: #2980b9;
         }
     </style>
 </head>
@@ -317,26 +292,6 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="notes">Примечания</label>
-                        <textarea id="notes" 
-                                  name="notes" 
-                                  placeholder="Дополнительная информация о поставке...">{{.supply.Notes}}</textarea>
-                        <div style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
-                            Необязательно
-                        </div>
-                    </div>
-                    
-                    <div class="form-info">
-                        <strong>Полезная информация:</strong>
-                        <ul>
-                            <li>Все поля, отмеченные *, обязательны для заполнения</li>
-                            <li>Общая стоимость рассчитывается автоматически</li>
-                            <li>Статус "Ожидается" используется для планируемых поставок</li>
-                            <li>Статус меняется на "Доставлено" после получения товара</li>
-                        </ul>
-                    </div>
-                    
                     <div class="form-actions">
                         <button type="submit" class="btn btn-submit">
                             <span style="margin-right: 8px;">✓</span> 
@@ -350,9 +305,7 @@
             </div>
         </div>
         
-        <div class="footer">
-            © СкладPRO • Управление поставками
-        </div>
+
     </div>
 
     <script>

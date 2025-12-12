@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -24,6 +25,13 @@ func ExportTXT(c *gin.Context) {
 	filename := "export.txt"
 
 	stores, suppliers, products, categories, supplies := storage.GetAllData()
+
+	// СОРТИРОВКА данных перед экспортом
+	sort.Slice(stores, func(i, j int) bool { return stores[i].ID < stores[j].ID })
+	sort.Slice(suppliers, func(i, j int) bool { return suppliers[i].ID < suppliers[j].ID })
+	sort.Slice(products, func(i, j int) bool { return products[i].ID < products[j].ID })
+	sort.Slice(categories, func(i, j int) bool { return categories[i].ID < categories[j].ID })
+	sort.Slice(supplies, func(i, j int) bool { return supplies[i].ID < supplies[j].ID })
 
 	// Создаем мапы для быстрого доступа по ID
 	categoryMap := make(map[int]models.Category)
@@ -49,8 +57,8 @@ func ExportTXT(c *gin.Context) {
 	switch dataType {
 	case "stores":
 		filename = "stores.txt"
-		content.WriteString("МАГАЗИНЫ\n")
-		content.WriteString("========\n")
+		content.WriteString("МАГАЗИНЫ (отсортированы по ID)\n")
+		content.WriteString("==============================\n")
 		for _, store := range stores {
 			content.WriteString(fmt.Sprintf("ID: %d\n", store.ID))
 			content.WriteString(fmt.Sprintf("Название: %s\n", store.Name))
@@ -64,8 +72,8 @@ func ExportTXT(c *gin.Context) {
 
 	case "products":
 		filename = "products.txt"
-		content.WriteString("ТОВАРЫ\n")
-		content.WriteString("======\n")
+		content.WriteString("ТОВАРЫ (отсортированы по ID)\n")
+		content.WriteString("============================\n")
 		for _, product := range products {
 			categoryName := "Без категории"
 			if cat, exists := categoryMap[product.CategoryID]; exists {
@@ -87,8 +95,8 @@ func ExportTXT(c *gin.Context) {
 
 	case "suppliers":
 		filename = "suppliers.txt"
-		content.WriteString("ПОСТАВЩИКИ\n")
-		content.WriteString("==========\n")
+		content.WriteString("ПОСТАВЩИКИ (отсортированы по ID)\n")
+		content.WriteString("================================\n")
 		for _, supplier := range suppliers {
 			content.WriteString(fmt.Sprintf("ID: %d\n", supplier.ID))
 			content.WriteString(fmt.Sprintf("Название: %s\n", supplier.Name))
@@ -106,8 +114,8 @@ func ExportTXT(c *gin.Context) {
 
 	case "supplies":
 		filename = "supplies.txt"
-		content.WriteString("ПОСТАВКИ\n")
-		content.WriteString("========\n")
+		content.WriteString("ПОСТАВКИ (отсортированы по ID)\n")
+		content.WriteString("==============================\n")
 		for _, supply := range supplies {
 			supplierName := "Неизвестный"
 			if sup, exists := supplierMap[supply.SupplierID]; exists {
@@ -136,8 +144,8 @@ func ExportTXT(c *gin.Context) {
 
 	case "categories":
 		filename = "categories.txt"
-		content.WriteString("КАТЕГОРИИ\n")
-		content.WriteString("=========\n")
+		content.WriteString("КАТЕГОРИИ (отсортированы по ID)\n")
+		content.WriteString("===============================\n")
 		for _, category := range categories {
 			content.WriteString(fmt.Sprintf("ID: %d\n", category.ID))
 			content.WriteString(fmt.Sprintf("Название: %s\n", category.Name))
@@ -150,24 +158,24 @@ func ExportTXT(c *gin.Context) {
 	default:
 		filename = "full_export.txt"
 		// Экспорт всего
-		content.WriteString("МАГАЗИНЫ\n")
-		content.WriteString("========\n")
+		content.WriteString("МАГАЗИНЫ (отсортированы по ID)\n")
+		content.WriteString("==============================\n")
 		for _, store := range stores {
 			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Адрес: %s | Дата: %s\n",
 				store.ID, store.Name, store.Address, store.CreatedAt.Format("02.01.2006")))
 		}
 		content.WriteString("\n")
 
-		content.WriteString("КАТЕГОРИИ\n")
-		content.WriteString("=========\n")
+		content.WriteString("КАТЕГОРИИ (отсортированы по ID)\n")
+		content.WriteString("===============================\n")
 		for _, category := range categories {
 			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Описание: %s\n",
 				category.ID, category.Name, category.Description))
 		}
 		content.WriteString("\n")
 
-		content.WriteString("ТОВАРЫ\n")
-		content.WriteString("======\n")
+		content.WriteString("ТОВАРЫ (отсортированы по ID)\n")
+		content.WriteString("============================\n")
 		for _, product := range products {
 			categoryName := "Без категории"
 			if cat, exists := categoryMap[product.CategoryID]; exists {
@@ -178,16 +186,16 @@ func ExportTXT(c *gin.Context) {
 		}
 		content.WriteString("\n")
 
-		content.WriteString("ПОСТАВЩИКИ\n")
-		content.WriteString("==========\n")
+		content.WriteString("ПОСТАВЩИКИ (отсортированы по ID)\n")
+		content.WriteString("================================\n")
 		for _, supplier := range suppliers {
 			content.WriteString(fmt.Sprintf("ID: %d | Название: %s | Телефон: %s | Email: %s | Адрес: %s\n",
 				supplier.ID, supplier.Name, supplier.Phone, supplier.Email, supplier.Address))
 		}
 		content.WriteString("\n")
 
-		content.WriteString("ПОСТАВКИ\n")
-		content.WriteString("========\n")
+		content.WriteString("ПОСТАВКИ (отсортированы по ID)\n")
+		content.WriteString("==============================\n")
 		for _, supply := range supplies {
 			supplierName := "Неизвестный"
 			if sup, exists := supplierMap[supply.SupplierID]; exists {
@@ -227,6 +235,13 @@ func ExportCSV(c *gin.Context) {
 	filename := "export.csv"
 
 	stores, suppliers, products, categories, supplies := storage.GetAllData()
+
+	// СОРТИРОВКА данных перед экспортом
+	sort.Slice(stores, func(i, j int) bool { return stores[i].ID < stores[j].ID })
+	sort.Slice(suppliers, func(i, j int) bool { return suppliers[i].ID < suppliers[j].ID })
+	sort.Slice(products, func(i, j int) bool { return products[i].ID < products[j].ID })
+	sort.Slice(categories, func(i, j int) bool { return categories[i].ID < categories[j].ID })
+	sort.Slice(supplies, func(i, j int) bool { return supplies[i].ID < supplies[j].ID })
 
 	// Создаем мапы для быстрого доступа по ID
 	categoryMap := make(map[int]models.Category)
@@ -346,7 +361,7 @@ func ExportCSV(c *gin.Context) {
 
 	default:
 		// Полный экспорт
-		content.WriteString("=== МАГАЗИНЫ ===\r\n")
+		content.WriteString("=== МАГАЗИНЫ (отсортированы по ID) ===\r\n")
 		content.WriteString("ID;Название;Адрес;Логотип;Дата создания\r\n")
 		for _, store := range stores {
 			content.WriteString(fmt.Sprintf("%d;%s;%s;%s;%s\r\n",
@@ -358,7 +373,7 @@ func ExportCSV(c *gin.Context) {
 			))
 		}
 
-		content.WriteString("\r\n=== КАТЕГОРИИ ===\r\n")
+		content.WriteString("\r\n=== КАТЕГОРИИ (отсортированы по ID) ===\r\n")
 		content.WriteString("ID;Название;Описание\r\n")
 		for _, category := range categories {
 			content.WriteString(fmt.Sprintf("%d;%s;%s\r\n",
@@ -368,7 +383,7 @@ func ExportCSV(c *gin.Context) {
 			))
 		}
 
-		content.WriteString("\r\n=== ТОВАРЫ ===\r\n")
+		content.WriteString("\r\n=== ТОВАРЫ (отсортированы по ID) ===\r\n")
 		content.WriteString("ID;Название;Артикул;Цена;Описание;Фото;Категория;Дата создания\r\n")
 		for _, product := range products {
 			categoryName := "Без категории"
@@ -388,7 +403,7 @@ func ExportCSV(c *gin.Context) {
 			))
 		}
 
-		content.WriteString("\r\n=== ПОСТАВЩИКИ ===\r\n")
+		content.WriteString("\r\n=== ПОСТАВЩИКИ (отсортированы по ID) ===\r\n")
 		content.WriteString("ID;Название;Телефон;Email;Адрес\r\n")
 		for _, supplier := range suppliers {
 			content.WriteString(fmt.Sprintf("%d;%s;%s;%s;%s\r\n",
@@ -400,7 +415,7 @@ func ExportCSV(c *gin.Context) {
 			))
 		}
 
-		content.WriteString("\r\n=== ПОСТАВКИ ===\r\n")
+		content.WriteString("\r\n=== ПОСТАВКИ (отсортированы по ID) ===\r\n")
 		content.WriteString("ID;Поставщик;Товар;Количество;Цена за ед.;Итого;Дата;Статус;Примечания;Дата создания\r\n")
 		for _, supply := range supplies {
 			supplierName := "Неизвестный"

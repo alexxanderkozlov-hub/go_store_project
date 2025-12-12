@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sort" // Добавили импорт sort
 	"strconv"
 	"time"
 
@@ -19,6 +20,12 @@ func SuppliesPage(c *gin.Context) {
 	}
 
 	supplyList := storage.GetAllSupplies()
+
+	// Добавили сортировку по возрастанию ID
+	sort.Slice(supplyList, func(i, j int) bool {
+		return supplyList[i].ID < supplyList[j].ID
+	})
+
 	supplierList := storage.GetAllSuppliers()
 	productList := storage.GetAllProducts()
 
@@ -32,10 +39,18 @@ func SuppliesPage(c *gin.Context) {
 		productMap[product.ID] = product
 	}
 
+	// РАСЧЕТ ОБЩЕЙ СТАТИСТИКИ
+	var totalQuantity int
+	var totalCost float64
+
 	supplyData := make([]gin.H, 0, len(supplyList))
 	for _, supply := range supplyList {
 		supplier := supplierMap[supply.SupplierID]
 		product := productMap[supply.ProductID]
+
+		// Суммируем статистику
+		totalQuantity += supply.Quantity
+		totalCost += supply.Total
 
 		supplyData = append(supplyData, gin.H{
 			"ID":          supply.ID,
@@ -56,9 +71,11 @@ func SuppliesPage(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "supplies.html", gin.H{
-		"username":    GetUsername(c),
-		"supplies":    supplyData,
-		"total_count": len(supplyList),
+		"username":       GetUsername(c),
+		"supplies":       supplyData,
+		"total_count":    len(supplyList),
+		"total_quantity": totalQuantity,
+		"total_cost":     totalCost,
 	})
 }
 
