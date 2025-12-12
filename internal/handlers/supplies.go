@@ -92,7 +92,7 @@ func SupplyCreateHandler(c *gin.Context) {
 	productIDStr := c.PostForm("product_id")
 	quantityStr := c.PostForm("quantity")
 	priceStr := c.PostForm("price")
-	dateStr := c.PostForm("date") // <-- получаем дату из формы
+	dateStr := c.PostForm("date")
 	status := c.PostForm("status")
 	notes := c.PostForm("notes")
 

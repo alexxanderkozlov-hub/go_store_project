@@ -1,24 +1,22 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
 	"go_store_project/internal/handlers"
 	"go_store_project/internal/storage"
+	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 func init() {
-	// Инициализация хранилища (теперь подключается к PostgreSQL)
+	// Инициализация хранилища (подключается к PostgreSQL)
 	storage.Init()
 }
 
 func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-
 	r.LoadHTMLGlob("templates/*.html")
 	r.Static("/static", "./static")
 
@@ -34,8 +32,6 @@ func main() {
 		r.Run(":8081")
 	}
 }
-
-// Остальной код setupRoutes остается без изменений...
 
 func setupRoutes(r *gin.Engine) {
 	r.GET("/", func(c *gin.Context) {
