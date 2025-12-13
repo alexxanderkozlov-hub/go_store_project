@@ -3,44 +3,53 @@ package storage
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"time"
-
 	"go_store_project/config"
 	"go_store_project/internal/models"
+	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
+// Storage структура-обертка для работы с базой данных
 type Storage struct {
-	db *sql.DB
+	db *sql.DB // Подключение к базе данных PostgreSQL
 }
 
+// Глобальная переменная для хранения единственного экземпляра Storage
+// (паттерн Singleton)
 var (
 	storageInstance *Storage
 )
 
-// Инициализация хранилища
+// Инициализация хранилища - вызывается при старте приложения
 func Init() {
+	// Загрузка конфигурации из config пакета
 	cfg := config.Load()
 
+	// Формирование строки подключения к PostgreSQL
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName,
 	)
 
+	// Открытие соединения с базой данных
+	// sql.Open не устанавливает соединение, только инициализирует пул
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
+		// Фатальная ошибка - приложение не может работать без БД
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
+	// Проверка реального соединения с БД
 	if err = db.Ping(); err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	// Создание единственного экземпляра Storage
 	storageInstance = &Storage{db: db}
 
-	// Инициализация таблиц
+	// Инициализация таблиц в базе данных
 	if err := storageInstance.initTables(); err != nil {
 		log.Fatalf("Failed to initialize database tables: %v", err)
 	}
@@ -48,18 +57,20 @@ func Init() {
 	log.Println("Connected to PostgreSQL database")
 }
 
+// initTables создает таблицы в базе данных, если они не существуют
 func (s *Storage) initTables() error {
+	// Массив SQL-запросов для создания таблиц
 	queries := []string{
 		// Таблица магазинов
 		`CREATE TABLE IF NOT EXISTS stores (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            address TEXT,
-            logo TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id SERIAL PRIMARY KEY,                      -- Автоинкрементируемый первичный ключ
+            name VARCHAR(100) NOT NULL,                 -- Название магазина (обязательное)
+            address TEXT,                               -- Адрес
+            logo TEXT,                                  -- Путь к логотипу
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Дата создания
         )`,
 
-		// Таблица категорий
+		// Таблица категорий товаров
 		`CREATE TABLE IF NOT EXISTS categories (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
@@ -70,8 +81,8 @@ func (s *Storage) initTables() error {
 		`CREATE TABLE IF NOT EXISTS suppliers (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
-            phone VARCHAR(20),
-            email VARCHAR(100),
+            phone VARCHAR(20),                          -- Телефон (ограниченная длина)
+            email VARCHAR(100),                         -- Email
             address TEXT
         )`,
 
@@ -79,48 +90,51 @@ func (s *Storage) initTables() error {
 		`CREATE TABLE IF NOT EXISTS products (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
-            price DECIMAL(10,2) NOT NULL,
+            price DECIMAL(10,2) NOT NULL,              -- Цена с 2 знаками после запятой
             description TEXT,
             photo TEXT,
-            category_id INTEGER REFERENCES categories(id),
-            sku VARCHAR(50),
+            category_id INTEGER REFERENCES categories(id), -- Внешний ключ к категориям
+            sku VARCHAR(50),                            -- Артикул
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 
 		// Таблица пользователей
 		`CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL
+            username VARCHAR(50) UNIQUE NOT NULL,       -- Уникальное имя пользователя
+            password VARCHAR(255) NOT NULL               -- Пароль (хэш)
         )`,
 
 		// Таблица поставок
 		`CREATE TABLE IF NOT EXISTS supplies (
             id SERIAL PRIMARY KEY,
-            supplier_id INTEGER REFERENCES suppliers(id),
-            product_id INTEGER REFERENCES products(id),
-            quantity INTEGER NOT NULL,
-            price DECIMAL(10,2) NOT NULL,
-            total DECIMAL(10,2) GENERATED ALWAYS AS (quantity * price) STORED,
-            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status VARCHAR(20) DEFAULT 'pending',
-            notes TEXT,
+            supplier_id INTEGER REFERENCES suppliers(id), -- Внешний ключ к поставщикам
+            product_id INTEGER REFERENCES products(id),   -- Внешний ключ к продуктам
+            quantity INTEGER NOT NULL,                    -- Количество
+            price DECIMAL(10,2) NOT NULL,                -- Цена за единицу
+            total DECIMAL(10,2) GENERATED ALWAYS AS (quantity * price) STORED, -- Вычисляемое поле
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    -- Дата поставки
+            status VARCHAR(20) DEFAULT 'pending',        -- Статус (по умолчанию 'ожидается')
+            notes TEXT,                                  -- Примечания
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`,
 	}
 
+	// Выполнение каждого запроса создания таблицы
 	for _, query := range queries {
-		_, err := s.db.Exec(query)
+		_, err := s.db.Exec(query) // Exec для запросов без возвращаемых строк
 		if err != nil {
 			return fmt.Errorf("failed to create table: %w", err)
 		}
 	}
 
-	// Создаем начального пользователя, если таблица пуста
+	// Проверка наличия пользователей в системе
 	var count int
+	// Подсчет количества пользователей
 	err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
 	if err == nil && count == 0 {
-		// Пароль: admin123
+		// Если таблица пуста, создаем пользователя по умолчанию
+		// ВНИМАНИЕ: Пароль хранится в открытом виде! В продакшене нужно хэшировать
 		_, err = s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)",
 			"admin", "admin123")
 		if err != nil {
@@ -131,12 +145,19 @@ func (s *Storage) initTables() error {
 	return nil
 }
 
-// Store operations
+// ==============================
+// ОПЕРАЦИИ С МАГАЗИНАМИ (Store)
+// ==============================
+
+// GetAllStores возвращает список всех магазинов из БД
 func GetAllStores() []models.Store {
+	// Проверка инициализации хранилища
 	if storageInstance == nil {
-		return []models.Store{}
+		return []models.Store{} // Возвращаем пустой слайс
 	}
 
+	// Выполнение SQL-запроса на получение всех магазинов
+	// ORDER BY created_at DESC - сортировка от новых к старым
 	rows, err := storageInstance.db.Query(`
         SELECT id, name, address, logo, created_at 
         FROM stores 
@@ -146,15 +167,17 @@ func GetAllStores() []models.Store {
 		log.Printf("Error getting stores: %v", err)
 		return []models.Store{}
 	}
-	defer rows.Close()
+	defer rows.Close() // Важно: закрываем rows после использования
 
 	var stores []models.Store
+	// Итерация по результатам запроса
 	for rows.Next() {
 		var store models.Store
+		// Сканирование данных из строки в структуру Store
 		if err := rows.Scan(&store.ID, &store.Name, &store.Address,
 			&store.Logo, &store.CreatedAt); err != nil {
 			log.Printf("Error scanning store: %v", err)
-			continue
+			continue // Пропускаем проблемные строки
 		}
 		stores = append(stores, store)
 	}
@@ -162,12 +185,14 @@ func GetAllStores() []models.Store {
 	return stores
 }
 
+// GetStore возвращает магазин по его ID
 func GetStore(id int) (models.Store, bool) {
 	if storageInstance == nil {
-		return models.Store{}, false
+		return models.Store{}, false // false - не найден
 	}
 
 	var store models.Store
+	// QueryRow для запросов, возвращающих максимум одну строку
 	err := storageInstance.db.QueryRow(`
         SELECT id, name, address, logo, created_at 
         FROM stores WHERE id = $1
@@ -180,15 +205,17 @@ func GetStore(id int) (models.Store, bool) {
 		return models.Store{}, false
 	}
 
-	return store, true
+	return store, true // true - найден успешно
 }
 
+// CreateStore создает новый магазин и возвращает его ID
 func CreateStore(store models.Store) int {
 	if storageInstance == nil {
-		return 0
+		return 0 // 0 означает ошибку
 	}
 
 	var id int
+	// RETURNING id - PostgreSQL возвращает сгенерированный ID
 	err := storageInstance.db.QueryRow(`
         INSERT INTO stores (name, address, logo, created_at) 
         VALUES ($1, $2, $3, $4) 
@@ -200,14 +227,16 @@ func CreateStore(store models.Store) int {
 		return 0
 	}
 
-	return id
+	return id // Возвращаем ID созданного магазина
 }
 
+// UpdateStore обновляет данные магазина по ID
 func UpdateStore(id int, store models.Store) bool {
 	if storageInstance == nil {
 		return false
 	}
 
+	// Exec для запросов UPDATE/DELETE
 	result, err := storageInstance.db.Exec(`
         UPDATE stores 
         SET name = $1, address = $2, logo = $3 
@@ -219,10 +248,12 @@ func UpdateStore(id int, store models.Store) bool {
 		return false
 	}
 
+	// Проверка, была ли обновлена хотя бы одна строка
 	rows, _ := result.RowsAffected()
 	return rows > 0
 }
 
+// DeleteStore удаляет магазин по ID
 func DeleteStore(id int) bool {
 	if storageInstance == nil {
 		return false
@@ -238,7 +269,10 @@ func DeleteStore(id int) bool {
 	return rows > 0
 }
 
-// Category operations
+// ==============================
+// ОПЕРАЦИИ С КАТЕГОРИЯМИ (Category)
+// ==============================
+
 func GetAllCategories() []models.Category {
 	if storageInstance == nil {
 		return []models.Category{}
@@ -344,7 +378,10 @@ func DeleteCategory(id int) bool {
 	return rows > 0
 }
 
-// Product operations
+// ==============================
+// ОПЕРАЦИИ С ТОВАРАМИ (Product)
+// ==============================
+
 func GetAllProducts() []models.Product {
 	if storageInstance == nil {
 		return []models.Product{}
@@ -456,7 +493,10 @@ func DeleteProduct(id int) bool {
 	return rows > 0
 }
 
-// Supplier operations
+// ==============================
+// ОПЕРАЦИИ С ПОСТАВЩИКАМИ (Supplier)
+// ==============================
+
 func GetAllSuppliers() []models.Supplier {
 	if storageInstance == nil {
 		return []models.Supplier{}
@@ -564,7 +604,10 @@ func DeleteSupplier(id int) bool {
 	return rows > 0
 }
 
-// Supply operations
+// ==============================
+// ОПЕРАЦИИ С ПОСТАВКАМИ (Supply)
+// ==============================
+
 func GetAllSupplies() []models.Supply {
 	if storageInstance == nil {
 		return []models.Supply{}
@@ -680,7 +723,10 @@ func DeleteSupply(id int) bool {
 	return rows > 0
 }
 
-// User operations
+// ==============================
+// ОПЕРАЦИИ С ПОЛЬЗОВАТЕЛЯМИ (User)
+// ==============================
+
 func CreateUser(user models.User) int {
 	if storageInstance == nil {
 		return 0
@@ -701,6 +747,7 @@ func CreateUser(user models.User) int {
 	return id
 }
 
+// GetUserByUsername ищет пользователя по имени пользователя
 func GetUserByUsername(username string) (models.User, bool) {
 	if storageInstance == nil {
 		return models.User{}, false
@@ -722,7 +769,7 @@ func GetUserByUsername(username string) (models.User, bool) {
 	return user, true
 }
 
-// Get all data for export
+// GetAllData возвращает все данные из всех таблиц для экспорта
 func GetAllData() ([]models.Store, []models.Supplier, []models.Product, []models.Category, []models.Supply) {
 	return GetAllStores(), GetAllSuppliers(), GetAllProducts(), GetAllCategories(), GetAllSupplies()
 }

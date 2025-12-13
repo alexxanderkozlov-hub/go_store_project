@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"sort" // Добавили импорт sort
+	"sort"
 	"strconv"
 	"time"
 
@@ -21,7 +21,7 @@ func SuppliesPage(c *gin.Context) {
 
 	supplyList := storage.GetAllSupplies()
 
-	// Добавили сортировку по возрастанию ID
+	// Сортировка по возрастанию ID
 	sort.Slice(supplyList, func(i, j int) bool {
 		return supplyList[i].ID < supplyList[j].ID
 	})
@@ -163,12 +163,12 @@ func SupplyCreateHandler(c *gin.Context) {
 	if dateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			date = time.Now() // Если ошибка парсинга, используем текущую дату
+			date = time.Now()
 		} else {
 			date = parsedDate
 		}
 	} else {
-		date = time.Now() // Если дата не указана, используем текущую
+		date = time.Now()
 	}
 
 	total := float64(quantity) * price
@@ -179,7 +179,7 @@ func SupplyCreateHandler(c *gin.Context) {
 		Quantity:   quantity,
 		Price:      price,
 		Total:      total,
-		Date:       date, // <-- используем дату
+		Date:       date,
 		Status:     status,
 		Notes:      notes,
 		CreatedAt:  time.Now(),
@@ -238,7 +238,7 @@ func SupplyUpdateHandler(c *gin.Context) {
 	productIDStr := c.PostForm("product_id")
 	quantityStr := c.PostForm("quantity")
 	priceStr := c.PostForm("price")
-	dateStr := c.PostForm("date") // <-- получаем дату из формы
+	dateStr := c.PostForm("date")
 	status := c.PostForm("status")
 	notes := c.PostForm("notes")
 
@@ -294,12 +294,12 @@ func SupplyUpdateHandler(c *gin.Context) {
 	if dateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			date = time.Now() // Если ошибка парсинга, используем текущую дату
+			date = time.Now()
 		} else {
 			date = parsedDate
 		}
 	} else {
-		date = time.Now() // Если дата не указана, используем текущую
+		date = time.Now()
 	}
 
 	total := float64(quantity) * price
@@ -311,7 +311,7 @@ func SupplyUpdateHandler(c *gin.Context) {
 		Quantity:   quantity,
 		Price:      price,
 		Total:      total,
-		Date:       date, // <-- используем дату
+		Date:       date,
 		Status:     status,
 		Notes:      notes,
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sort" // Добавили импорт sort
+	"sort"
 	"strconv"
 
 	"go_store_project/internal/models"
@@ -21,7 +21,7 @@ func ProductsList(c *gin.Context) {
 
 	productList := storage.GetAllProducts()
 
-	// Добавили сортировку по возрастанию ID
+	// Сортировка по возрастанию ID
 	sort.Slice(productList, func(i, j int) bool {
 		return productList[i].ID < productList[j].ID
 	})
@@ -123,11 +123,8 @@ func ProductCreateHandler(c *gin.Context) {
 
 	log.Printf("DEBUG: Product object before save: %+v", product)
 
-	// Исправлено: используем возвращаемое значение
 	productID := storage.CreateProduct(product)
 	log.Printf("DEBUG: Product created with ID: %d", productID)
-
-	// Проверяем что сохранилось
 	products := storage.GetAllProducts()
 	log.Printf("DEBUG: Total products in storage after create: %d", len(products))
 	for i, prod := range products {

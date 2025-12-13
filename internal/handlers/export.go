@@ -157,7 +157,6 @@ func ExportTXT(c *gin.Context) {
 
 	default:
 		filename = "full_export.txt"
-		// Экспорт всего
 		content.WriteString("МАГАЗИНЫ (отсортированы по ID)\n")
 		content.WriteString("==============================\n")
 		for _, store := range stores {
@@ -360,7 +359,6 @@ func ExportCSV(c *gin.Context) {
 		}
 
 	default:
-		// Полный экспорт
 		content.WriteString("=== МАГАЗИНЫ (отсортированы по ID) ===\r\n")
 		content.WriteString("ID;Название;Адрес;Логотип;Дата создания\r\n")
 		for _, store := range stores {

@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"sort" // Добавили импорт sort
+	"sort"
 	"strconv"
 
 	"go_store_project/internal/models"
@@ -20,7 +20,7 @@ func SuppliersPage(c *gin.Context) {
 
 	supplierList := storage.GetAllSuppliers()
 
-	// Добавили сортировку по возрастанию ID
+	// Сортировка по возрастанию ID
 	sort.Slice(supplierList, func(i, j int) bool {
 		return supplierList[i].ID < supplierList[j].ID
 	})
