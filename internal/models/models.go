@@ -68,9 +68,7 @@ type CartItem struct {
 
 type Order struct {
 	ID          int
-	UserID      int
 	Username    string
-	ProductID   int
 	ProductName string
 	Quantity    int
 	Total       float64

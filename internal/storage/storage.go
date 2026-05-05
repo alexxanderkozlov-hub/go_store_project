@@ -23,38 +23,31 @@ var (
 )
 
 // Инициализация хранилища - вызывается при старте приложения
-func Init() {
-	// Загрузка конфигурации из config пакета
+func Init() error {
 	cfg := config.Load()
 
-	// Формирование строки подключения к PostgreSQL
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName,
 	)
 
-	// Открытие соединения с базой данных
-	// sql.Open не устанавливает соединение, только инициализирует пул
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		// Фатальная ошибка - приложение не может работать без БД
-		log.Fatalf("Failed to open database: %v", err)
+		return err
 	}
 
-	// Проверка реального соединения с БД
 	if err = db.Ping(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		return err
 	}
 
-	// Создание единственного экземпляра Storage
 	storageInstance = &Storage{db: db}
 
-	// Инициализация таблиц в базе данных
 	if err := storageInstance.initTables(); err != nil {
-		log.Fatalf("Failed to initialize database tables: %v", err)
+		return err
 	}
 
 	log.Println("Connected to PostgreSQL database")
+	return nil
 }
 
 //корзина

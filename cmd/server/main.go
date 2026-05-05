@@ -9,13 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func init() {
-	// Инициализация хранилища (подключается к PostgreSQL)
-	storage.Init()
-}
-
 func main() {
 	gin.SetMode(gin.ReleaseMode)
+
+	// ================= ИНИЦИАЛИЗАЦИЯ БД =================
+	if err := storage.Init(); err != nil {
+		log.Fatal("❌ Ошибка подключения к БД:", err)
+	}
+
+	// ================= SERVER =================
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*.html")
 	r.Static("/static", "./static")
@@ -24,38 +26,41 @@ func main() {
 
 	port := ":8082"
 	log.Printf("🚀 Сервер запущен на http://localhost%s", port)
-	log.Printf("📊 PostgreSQL подключена")
+	log.Println("📊 PostgreSQL подключена")
 
 	err := r.Run(port)
 	if err != nil {
-		log.Printf("Порт 8082 занят, пробуем 8081...")
+		log.Printf("⚠️ Порт 8082 занят, пробуем 8081...")
 		r.Run(":8081")
 	}
 }
 
+// ================= ROUTES =================
 func setupRoutes(r *gin.Engine) {
+
 	r.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/login")
 	})
 
-	// Главное меню и авторизация
+	// AUTH
 	r.GET("/main", handlers.MainMenuPage)
 	r.GET("/login", handlers.LoginPage)
 	r.POST("/login", handlers.LoginHandler)
 	r.GET("/logout", handlers.LogoutHandler)
 
-	// 👇 ДОБАВИЛИ (страница покупателя)
+	// SHOP + CART
 	r.GET("/shop", handlers.ShopPage)
 	r.GET("/cart/add/:id", handlers.AddToCartHandler)
 	r.GET("/cart/delete/:id", handlers.RemoveFromCart)
 	r.GET("/cart/buy/:id", handlers.BuyFromCart)
 	r.GET("/cart", handlers.CartPage)
-	r.GET("/orders", handlers.OrdersPage)
 
+	// ORDERS
+	r.GET("/orders", handlers.OrdersPage)
 	r.GET("/orders/delete/:id", handlers.DeleteOrder)
 	r.GET("/orders/status/:id/:status", handlers.UpdateOrderStatusHandler)
 
-	// Магазины
+	// STORES
 	r.GET("/stores", handlers.StoreListPage)
 	r.GET("/stores/create", handlers.StoreCreatePage)
 	r.POST("/stores/create", handlers.StoreCreateHandler)
@@ -63,7 +68,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/stores/:id/edit", handlers.StoreUpdateHandler)
 	r.GET("/stores/:id/delete", handlers.StoreDeleteHandler)
 
-	// Категории
+	// CATEGORIES
 	r.GET("/categories", handlers.CategoriesListPage)
 	r.GET("/categories/create", handlers.CategoryCreatePage)
 	r.POST("/categories/create", handlers.CategoryCreateHandler)
@@ -71,7 +76,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/categories/:id/edit", handlers.CategoryUpdateHandler)
 	r.GET("/categories/:id/delete", handlers.CategoryDeleteHandler)
 
-	// Товары
+	// PRODUCTS
 	r.GET("/products", handlers.ProductsList)
 	r.GET("/products/create", handlers.ProductCreatePage)
 	r.POST("/products/create", handlers.ProductCreateHandler)
@@ -79,7 +84,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/products/:id/edit", handlers.ProductUpdateHandler)
 	r.GET("/products/:id/delete", handlers.ProductDeleteHandler)
 
-	// Поставщики
+	// SUPPLIERS
 	r.GET("/suppliers", handlers.SuppliersPage)
 	r.GET("/suppliers/create", handlers.SupplierCreatePage)
 	r.POST("/suppliers/create", handlers.SupplierCreateHandler)
@@ -87,7 +92,7 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/suppliers/:id/edit", handlers.SupplierUpdateHandler)
 	r.GET("/suppliers/:id/delete", handlers.SupplierDeleteHandler)
 
-	// Поставки
+	// SUPPLIES
 	r.GET("/supplies", handlers.SuppliesPage)
 	r.GET("/supplies/create", handlers.SupplyCreatePage)
 	r.POST("/supplies/create", handlers.SupplyCreateHandler)
@@ -95,12 +100,12 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/supplies/:id/edit", handlers.SupplyUpdateHandler)
 	r.GET("/supplies/:id/delete", handlers.SupplyDeleteHandler)
 
-	// Экспорт данных
+	// EXPORT
 	r.GET("/export/txt", handlers.ExportTXT)
 	r.GET("/export/csv", handlers.ExportCSV)
 	r.GET("/export/excel", handlers.ExportExcel)
 
-	// Статические страницы
+	// STATIC
 	r.GET("/about", handlers.AboutPage)
 	r.GET("/contacts", handlers.ContactsPage)
 }
