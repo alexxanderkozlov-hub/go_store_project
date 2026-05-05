@@ -16,8 +16,15 @@
             margin: auto;
         }
 
-        h1 {
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
         }
 
         .btn {
@@ -27,6 +34,12 @@
             border-radius: 6px;
             color: white;
             margin-right: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-back {
+            background: #3498db;
         }
 
         .btn-progress {
@@ -79,7 +92,14 @@
 <body>
 <div class="container">
 
-    <h1>📦 Заказы покупателей</h1>
+    <!-- 🔙 ВЕРХНЯЯ ПАНЕЛЬ -->
+    <div class="top-bar">
+        <h1>📦 Заказы покупателей</h1>
+
+        <a href="/main" class="btn btn-back">
+            ← В главное меню
+        </a>
+    </div>
 
     <table>
         <thead>
