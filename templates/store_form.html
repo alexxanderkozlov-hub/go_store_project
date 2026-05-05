@@ -173,24 +173,6 @@
                 >{{if .store}}{{.store.Address}}{{end}}</textarea>
             </div>
             
-            <div class="input-group">
-                <label class="form-label" for="logo">Логотип:</label>
-                <div class="file-upload">
-                    <input 
-                        type="file" 
-                        id="logo" 
-                        name="logo" 
-                        accept="image/*" 
-                        style="display: none;"
-                        onchange="updateFileName(this)"
-                    >
-                    <button type="button" class="file-btn" onclick="document.getElementById('logo').click()">
-                        Выберите файл
-                    </button>
-                    <span id="fileName" class="file-name">Файл не выбран</span>
-                </div>
-            </div>
-            
             <div class="form-actions">
                 <button type="submit" class="save-btn">Сохранить</button>
                 <a href="/stores" class="back-link">← Назад к списку магазинов</a>

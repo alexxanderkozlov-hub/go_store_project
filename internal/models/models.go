@@ -55,28 +55,32 @@ type Supply struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// GetStatusText преобразует системный статус поставки в читаемый текст на русском
+// Используется для отображения в пользовательском интерфейсе
 func GetStatusText(status string) string {
 	switch status {
-	case "pending":
+	case "pending": // Ожидается доставка
 		return "Ожидается"
-	case "delivered":
+	case "delivered": // Доставлено успешно
 		return "Доставлено"
-	case "cancelled":
+	case "cancelled": // Поставка отменена
 		return "Отменено"
-	default:
-		return status
+	default: // На случай нестандартного статуса
+		return status // Возвращаем исходное значение
 	}
 }
 
+// GetStatusClass возвращает CSS-класс для стилизации статуса поставки
+// Используется для цветового кодирования статусов в интерфейсе
 func GetStatusClass(status string) string {
 	switch status {
 	case "pending":
-		return "status-pending"
+		return "status-pending" // Обычно желтый/оранжевый цвет
 	case "delivered":
-		return "status-delivered"
+		return "status-delivered" // Обычно зеленый цвет
 	case "cancelled":
-		return "status-cancelled"
+		return "status-cancelled" // Обычно красный цвет
 	default:
-		return "status-default"
+		return "status-default" // Стиль по умолчанию (серый)
 	}
 }

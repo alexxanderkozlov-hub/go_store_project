@@ -593,23 +593,7 @@
                 </tbody>
             </table>
             
-            {{if .products}}
-            <div class="table-footer">
-                <div>Показано товаров: <strong id="visible-count">{{len .products}}</strong></div>
-                <div id="sorting-info">
-                    {{if .sort_by}}
-                    Сортировка: 
-                    {{if eq .sort_by "id"}}ID{{end}}
-                    {{if eq .sort_by "name"}}Названию{{end}}
-                    {{if eq .sort_by "price"}}Цене{{end}}
-                    {{if eq .sort_by "sku"}}Артикулу{{end}}
-                    ({{if eq .direction "asc"}}по возрастанию{{else}}по убыванию{{end}})
-                    {{else}}
-                    Без сортировки
-                    {{end}}
-                </div>
-            </div>
-            {{end}}
+            
         </div>
         
         <!-- Назад -->

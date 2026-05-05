@@ -7,22 +7,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+<<<<<<< HEAD
 // ================= LOGIN =================
 
+=======
+// LoginPage отображает страницу входа в систему
+>>>>>>> 1cf7fdfbc9a7e77fa4e8e089e7f2790fb843adc1
 func LoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{})
 }
 
+// LoginHandler обрабатывает POST запрос на авторизацию
 func LoginHandler(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
+<<<<<<< HEAD
 	// получаем пользователя из БД
 	user, found := storage.GetUserByUsername(username)
 	if !found {
 		c.HTML(http.StatusOK, "login.html", gin.H{
 			"error": "Пользователь не найден",
 		})
+=======
+	if username == "admin" && password == "admin123" {
+		c.SetCookie("auth", "true", 3600, "/", "", false, true)
+		c.SetCookie("username", username, 3600, "/", "", false, false)
+		// Перенаправление на главную страницу
+		c.Redirect(http.StatusFound, "/main")
+>>>>>>> 1cf7fdfbc9a7e77fa4e8e089e7f2790fb843adc1
 		return
 	}
 
@@ -71,6 +84,7 @@ func GetUsername(c *gin.Context) string {
 	return username
 }
 
+<<<<<<< HEAD
 func GetRole(c *gin.Context) string {
 	role, err := c.Cookie("role")
 	if err != nil {
@@ -82,6 +96,9 @@ func GetRole(c *gin.Context) string {
 // ================= PAGES =================
 
 // админка
+=======
+// MainMenuPage отображает главное меню приложения
+>>>>>>> 1cf7fdfbc9a7e77fa4e8e089e7f2790fb843adc1
 func MainMenuPage(c *gin.Context) {
 	if !CheckAuth(c) || GetRole(c) != "admin" {
 		c.Redirect(http.StatusFound, "/login")
@@ -93,6 +110,7 @@ func MainMenuPage(c *gin.Context) {
 	})
 }
 
+<<<<<<< HEAD
 // страница покупателя
 func ShopPage(c *gin.Context) {
 	if !CheckAuth(c) || GetRole(c) != "customer" {
@@ -106,14 +124,19 @@ func ShopPage(c *gin.Context) {
 }
 
 // общие страницы (доступны всем авторизованным)
+=======
+// AboutPage отображает страницу "О проекте"
+>>>>>>> 1cf7fdfbc9a7e77fa4e8e089e7f2790fb843adc1
 func AboutPage(c *gin.Context) {
 	if !CheckAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
+
 	c.HTML(http.StatusOK, "about.html", gin.H{})
 }
 
+// ContactsPage отображает страницу контактов
 func ContactsPage(c *gin.Context) {
 	if !CheckAuth(c) {
 		c.Redirect(http.StatusFound, "/login")

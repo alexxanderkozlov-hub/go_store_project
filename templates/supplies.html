@@ -562,30 +562,14 @@
                     {{else}}
                         <tr>
                             <td colspan="9" class="no-data-row">
-                                <div class="no-data">
-                                    📭 Нет данных для отображения
-                                </div>
+
                             </td>
                         </tr>
                     {{end}}
                 </tbody>
             </table>
             
-            <div class="table-footer">
-                <div>Показано поставок: <strong id="filtered-count">{{.total_count}}</strong></div>
-                <div id="sort-info">
-                    {{if .sort_by}}
-                    Сортировка: 
-                    {{if eq .sort_by "id"}}ID{{end}}
-                    {{if eq .sort_by "date"}}Дате{{end}}
-                    {{if eq .sort_by "total"}}Сумме{{end}}
-                    {{if eq .sort_by "quantity"}}Количеству{{end}}
-                    ({{if eq .direction "asc"}}по возрастанию{{else}}по убыванию{{end}})
-                    {{else}}
-                    Без сортировки
-                    {{end}}
-                </div>
-            </div>
+
         </div>
         
         <!-- Назад -->

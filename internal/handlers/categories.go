@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"go_store_project/internal/models"
@@ -18,7 +19,13 @@ func CategoriesListPage(c *gin.Context) {
 		return
 	}
 
+	// Получение списка всех категорий из базы данных
 	categoryList := storage.GetAllCategories()
+
+	// Используем sort.Slice для сортировки слайса структур
+	sort.Slice(categoryList, func(i, j int) bool {
+		return categoryList[i].ID < categoryList[j].ID
+	})
 
 	log.Printf("DEBUG: Displaying %d categories", len(categoryList))
 
@@ -29,14 +36,13 @@ func CategoriesListPage(c *gin.Context) {
 	})
 }
 
+// CategoryCreatePage отображает форму создания новой категории
 func CategoryCreatePage(c *gin.Context) {
 	if !CheckAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
-
 	category := models.Category{}
-
 	c.HTML(http.StatusOK, "category_form.html", gin.H{
 		"title":    "Создать категорию",
 		"action":   "/categories/create",
@@ -52,11 +58,13 @@ func CategoryCreateHandler(c *gin.Context) {
 
 	name := c.PostForm("name")
 	description := c.PostForm("description")
-
 	log.Printf("DEBUG: Received form data - Name: %s, Description: %s", name, description)
 
+	// Валидация данных
 	if name == "" {
 		log.Printf("DEBUG: Validation failed - name is empty")
+
+		// Если название пустое, показываем форму снова с сообщением об ошибке
 		c.HTML(http.StatusOK, "category_form.html", gin.H{
 			"title":  "Создать категорию",
 			"action": "/categories/create",
@@ -76,21 +84,21 @@ func CategoryCreateHandler(c *gin.Context) {
 
 	log.Printf("DEBUG: Creating category object: %+v", category)
 
-	// Исправлено: используем возвращаемое значение
+	// Сохранение категории в базе данных
 	categoryID := storage.CreateCategory(category)
 	log.Printf("DEBUG: Category created with ID: %d", categoryID)
 
-	// Проверяем что сохранилось
+	// Проверка что категория сохранилась (для отладки)
 	categories := storage.GetAllCategories()
 	log.Printf("DEBUG: Total categories in storage after create: %d", len(categories))
 	for i, cat := range categories {
 		log.Printf("DEBUG: Category %d: ID=%d, Name=%s, Description=%s",
 			i, cat.ID, cat.Name, cat.Description)
 	}
-
 	c.Redirect(http.StatusFound, "/categories")
 }
 
+// CategoryEditPage отображает форму редактирования существующей категории
 func CategoryEditPage(c *gin.Context) {
 	if !CheckAuth(c) {
 		c.Redirect(http.StatusFound, "/login")
@@ -105,7 +113,6 @@ func CategoryEditPage(c *gin.Context) {
 	}
 
 	log.Printf("DEBUG: Loading category for edit: ID=%d", id)
-
 	category, exists := storage.GetCategory(id)
 	if !exists {
 		log.Printf("ERROR: Category not found: ID=%d", id)
@@ -114,7 +121,6 @@ func CategoryEditPage(c *gin.Context) {
 	}
 
 	log.Printf("DEBUG: Found category: %+v", category)
-
 	c.HTML(http.StatusOK, "category_form.html", gin.H{
 		"title":    "Редактировать категорию",
 		"action":   fmt.Sprintf("/categories/%d/edit", id),
@@ -137,7 +143,6 @@ func CategoryUpdateHandler(c *gin.Context) {
 
 	name := c.PostForm("name")
 	description := c.PostForm("description")
-
 	log.Printf("DEBUG: Updating category ID=%d - Name: %s, Description: %s",
 		id, name, description)
 
@@ -164,6 +169,7 @@ func CategoryUpdateHandler(c *gin.Context) {
 
 	log.Printf("DEBUG: Updating category: %+v", category)
 
+	// Обновление категории в базе данных
 	success := storage.UpdateCategory(id, category)
 	if !success {
 		log.Printf("ERROR: Failed to update category ID=%d", id)

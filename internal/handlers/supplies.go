@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -19,6 +20,12 @@ func SuppliesPage(c *gin.Context) {
 	}
 
 	supplyList := storage.GetAllSupplies()
+
+	// Сортировка по возрастанию ID
+	sort.Slice(supplyList, func(i, j int) bool {
+		return supplyList[i].ID < supplyList[j].ID
+	})
+
 	supplierList := storage.GetAllSuppliers()
 	productList := storage.GetAllProducts()
 
@@ -32,10 +39,18 @@ func SuppliesPage(c *gin.Context) {
 		productMap[product.ID] = product
 	}
 
+	// РАСЧЕТ ОБЩЕЙ СТАТИСТИКИ
+	var totalQuantity int
+	var totalCost float64
+
 	supplyData := make([]gin.H, 0, len(supplyList))
 	for _, supply := range supplyList {
 		supplier := supplierMap[supply.SupplierID]
 		product := productMap[supply.ProductID]
+
+		// Суммируем статистику
+		totalQuantity += supply.Quantity
+		totalCost += supply.Total
 
 		supplyData = append(supplyData, gin.H{
 			"ID":          supply.ID,
@@ -56,9 +71,11 @@ func SuppliesPage(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "supplies.html", gin.H{
-		"username":    GetUsername(c),
-		"supplies":    supplyData,
-		"total_count": len(supplyList),
+		"username":       GetUsername(c),
+		"supplies":       supplyData,
+		"total_count":    len(supplyList),
+		"total_quantity": totalQuantity,
+		"total_cost":     totalCost,
 	})
 }
 
@@ -92,7 +109,7 @@ func SupplyCreateHandler(c *gin.Context) {
 	productIDStr := c.PostForm("product_id")
 	quantityStr := c.PostForm("quantity")
 	priceStr := c.PostForm("price")
-	dateStr := c.PostForm("date") // <-- получаем дату из формы
+	dateStr := c.PostForm("date")
 	status := c.PostForm("status")
 	notes := c.PostForm("notes")
 
@@ -146,12 +163,12 @@ func SupplyCreateHandler(c *gin.Context) {
 	if dateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			date = time.Now() // Если ошибка парсинга, используем текущую дату
+			date = time.Now()
 		} else {
 			date = parsedDate
 		}
 	} else {
-		date = time.Now() // Если дата не указана, используем текущую
+		date = time.Now()
 	}
 
 	total := float64(quantity) * price
@@ -162,7 +179,7 @@ func SupplyCreateHandler(c *gin.Context) {
 		Quantity:   quantity,
 		Price:      price,
 		Total:      total,
-		Date:       date, // <-- используем дату
+		Date:       date,
 		Status:     status,
 		Notes:      notes,
 		CreatedAt:  time.Now(),
@@ -221,7 +238,7 @@ func SupplyUpdateHandler(c *gin.Context) {
 	productIDStr := c.PostForm("product_id")
 	quantityStr := c.PostForm("quantity")
 	priceStr := c.PostForm("price")
-	dateStr := c.PostForm("date") // <-- получаем дату из формы
+	dateStr := c.PostForm("date")
 	status := c.PostForm("status")
 	notes := c.PostForm("notes")
 
@@ -277,12 +294,12 @@ func SupplyUpdateHandler(c *gin.Context) {
 	if dateStr != "" {
 		parsedDate, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			date = time.Now() // Если ошибка парсинга, используем текущую дату
+			date = time.Now()
 		} else {
 			date = parsedDate
 		}
 	} else {
-		date = time.Now() // Если дата не указана, используем текущую
+		date = time.Now()
 	}
 
 	total := float64(quantity) * price
@@ -294,7 +311,7 @@ func SupplyUpdateHandler(c *gin.Context) {
 		Quantity:   quantity,
 		Price:      price,
 		Total:      total,
-		Date:       date, // <-- используем дату
+		Date:       date,
 		Status:     status,
 		Notes:      notes,
 	}
