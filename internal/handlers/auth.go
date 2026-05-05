@@ -90,18 +90,6 @@ func MainMenuPage(c *gin.Context) {
 	})
 }
 
-// ShopPage отображает страницу магазина (для покупателей)
-func ShopPage(c *gin.Context) {
-	if !CheckAuth(c) || GetRole(c) != "customer" {
-		c.Redirect(http.StatusFound, "/login")
-		return
-	}
-
-	c.HTML(http.StatusOK, "shop.html", gin.H{
-		"username": GetUsername(c),
-	})
-}
-
 // AboutPage отображает страницу "О проекте"
 func AboutPage(c *gin.Context) {
 	if !CheckAuth(c) {
