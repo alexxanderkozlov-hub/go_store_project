@@ -688,10 +688,10 @@ func CreateUser(user models.User) int {
 
 	var id int
 	err := storageInstance.db.QueryRow(`
-        INSERT INTO users (username, password) 
-        VALUES ($1, $2) 
+        INSERT INTO users (username, password, role) 
+        VALUES ($1, $2, $3) 
         RETURNING id
-    `, user.Username, user.Password).Scan(&id)
+    `, user.Username, user.Password, user.Role).Scan(&id)
 
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
@@ -708,9 +708,9 @@ func GetUserByUsername(username string) (models.User, bool) {
 
 	var user models.User
 	err := storageInstance.db.QueryRow(`
-        SELECT id, username, password 
+        SELECT id, username, password, role
         FROM users WHERE username = $1
-    `, username).Scan(&user.ID, &user.Username, &user.Password)
+    `, username).Scan(&user.ID, &user.Username, &user.Password, &user.Role)
 
 	if err != nil {
 		if err != sql.ErrNoRows {
