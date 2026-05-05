@@ -869,3 +869,53 @@ func GetCartTotal(userID int) float64 {
 
 	return total
 }
+
+func CreateOrder(userID, productID, quantity int, total float64) bool {
+	_, err := storageInstance.db.Exec(`
+		INSERT INTO orders (user_id, product_id, quantity, total)
+		VALUES ($1, $2, $3, $4)
+	`, userID, productID, quantity, total)
+
+	return err == nil
+}
+
+func GetOrders() []models.Order {
+	rows, err := storageInstance.db.Query(`
+		SELECT o.id, u.username, p.name, o.quantity, o.total, o.status
+		FROM orders o
+		JOIN users u ON u.id = o.user_id
+		JOIN products p ON p.id = o.product_id
+		ORDER BY o.created_at DESC
+	`)
+
+	if err != nil {
+		return []models.Order{}
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+
+	for rows.Next() {
+		var o models.Order
+		rows.Scan(&o.ID, &o.Username, &o.ProductName, &o.Quantity, &o.Total, &o.Status)
+		orders = append(orders, o)
+	}
+
+	return orders
+}
+
+func UpdateOrderStatus(id int, status string) bool {
+	_, err := storageInstance.db.Exec(`
+		UPDATE orders SET status=$1 WHERE id=$2
+	`, status, id)
+
+	return err == nil
+}
+
+func DeleteOrder(id int) bool {
+	_, err := storageInstance.db.Exec(`
+		DELETE FROM orders WHERE id=$1
+	`, id)
+
+	return err == nil
+}

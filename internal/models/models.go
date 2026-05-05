@@ -66,6 +66,17 @@ type CartItem struct {
 	Total     float64
 }
 
+type Order struct {
+	ID          int
+	UserID      int
+	Username    string
+	ProductID   int
+	ProductName string
+	Quantity    int
+	Total       float64
+	Status      string
+}
+
 // GetStatusText преобразует системный статус поставки в читаемый текст на русском
 // Используется для отображения в пользовательском интерфейсе
 func GetStatusText(status string) string {
@@ -93,5 +104,18 @@ func GetStatusClass(status string) string {
 		return "status-cancelled" // Обычно красный цвет
 	default:
 		return "status-default" // Стиль по умолчанию (серый)
+	}
+}
+
+func GetOrderStatusText(status string) string {
+	switch status {
+	case "new":
+		return "Новый"
+	case "in_progress":
+		return "В работе"
+	case "done":
+		return "Завершено"
+	default:
+		return status
 	}
 }

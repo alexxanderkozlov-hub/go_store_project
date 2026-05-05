@@ -50,6 +50,10 @@ func setupRoutes(r *gin.Engine) {
 	r.GET("/cart/delete/:id", handlers.RemoveFromCart)
 	r.GET("/cart/buy/:id", handlers.BuyFromCart)
 	r.GET("/cart", handlers.CartPage)
+	r.GET("/orders", handlers.OrdersPage)
+
+	r.GET("/orders/delete/:id", handlers.DeleteOrder)
+	r.GET("/orders/status/:id/:status", handlers.UpdateOrderStatusHandler)
 
 	// Магазины
 	r.GET("/stores", handlers.StoreListPage)

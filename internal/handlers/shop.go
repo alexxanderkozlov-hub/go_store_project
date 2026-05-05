@@ -101,18 +101,20 @@ func BuyFromCart(c *gin.Context) {
 	}
 
 	userID := getUserID(c)
-	if userID == 0 {
-		c.Redirect(http.StatusFound, "/login")
-		return
+
+	productID, _ := strconv.Atoi(c.Param("id"))
+
+	// получаем корзину
+	cart := storage.GetCart(userID)
+
+	for _, item := range cart {
+		if item.ProductID == productID {
+			storage.CreateOrder(userID, productID, item.Quantity, item.Total)
+			break
+		}
 	}
 
-	productID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.Redirect(http.StatusFound, "/cart")
-		return
-	}
-
-	// TODO: позже заменить на orders
+	// удаляем из корзины
 	storage.RemoveFromCart(userID, productID)
 
 	c.Redirect(http.StatusFound, "/cart")
@@ -131,4 +133,43 @@ func getUserID(c *gin.Context) int {
 	}
 
 	return user.ID
+}
+
+func OrdersPage(c *gin.Context) {
+	if !CheckAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	orders := storage.GetOrders()
+
+	c.HTML(http.StatusOK, "orders.html", gin.H{
+		"orders": orders,
+	})
+}
+
+func UpdateOrderStatusHandler(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	status := c.Param("status")
+
+	storage.UpdateOrderStatus(id, status)
+
+	c.Redirect(http.StatusFound, "/orders")
+}
+
+func DeleteOrder(c *gin.Context) {
+	if !CheckAuth(c) {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.Redirect(http.StatusFound, "/orders")
+		return
+	}
+
+	storage.DeleteOrder(id)
+
+	c.Redirect(http.StatusFound, "/orders")
 }
