@@ -57,6 +57,81 @@ func Init() {
 	log.Println("Connected to PostgreSQL database")
 }
 
+//корзина
+
+func AddToCart(userID, productID int) bool {
+	if storageInstance == nil {
+		return false
+	}
+
+	// проверим есть ли уже товар
+	var id int
+	err := storageInstance.db.QueryRow(`
+		SELECT id FROM cart_items 
+		WHERE user_id=$1 AND product_id=$2
+	`, userID, productID).Scan(&id)
+
+	if err == nil {
+		// уже есть → увеличиваем количество
+		_, err = storageInstance.db.Exec(`
+			UPDATE cart_items 
+			SET quantity = quantity + 1 
+			WHERE id=$1
+		`, id)
+		return err == nil
+	}
+
+	// нет → создаём
+	_, err = storageInstance.db.Exec(`
+		INSERT INTO cart_items (user_id, product_id, quantity)
+		VALUES ($1, $2, 1)
+	`, userID, productID)
+
+	return err == nil
+}
+
+func GetCart(userID int) []models.CartItem {
+	if storageInstance == nil {
+		return []models.CartItem{}
+	}
+
+	rows, err := storageInstance.db.Query(`
+		SELECT 
+			c.product_id,
+			p.name,
+			p.price,
+			c.quantity,
+			(p.price * c.quantity) as total
+		FROM cart_items c
+		JOIN products p ON p.id = c.product_id
+		WHERE c.user_id = $1
+	`, userID)
+
+	if err != nil {
+		return []models.CartItem{}
+	}
+	defer rows.Close()
+
+	var cart []models.CartItem
+
+	for rows.Next() {
+		var item models.CartItem
+		rows.Scan(&item.ProductID, &item.Name, &item.Price, &item.Quantity, &item.Total)
+		cart = append(cart, item)
+	}
+
+	return cart
+}
+
+func RemoveFromCart(userID, productID int) bool {
+	_, err := storageInstance.db.Exec(`
+		DELETE FROM cart_items 
+		WHERE user_id=$1 AND product_id=$2
+	`, userID, productID)
+
+	return err == nil
+}
+
 // initTables создает таблицы в базе данных, если они не существуют
 func (s *Storage) initTables() error {
 	// Массив SQL-запросов для создания таблиц
@@ -772,4 +847,25 @@ func GetUserByUsername(username string) (models.User, bool) {
 // GetAllData возвращает все данные из всех таблиц для экспорта
 func GetAllData() ([]models.Store, []models.Supplier, []models.Product, []models.Category, []models.Supply) {
 	return GetAllStores(), GetAllSuppliers(), GetAllProducts(), GetAllCategories(), GetAllSupplies()
+}
+
+func GetCartTotal(userID int) float64 {
+	if storageInstance == nil {
+		return 0
+	}
+
+	var total float64
+
+	err := storageInstance.db.QueryRow(`
+		SELECT COALESCE(SUM(p.price * c.quantity), 0)
+		FROM cart_items c
+		JOIN products p ON p.id = c.product_id
+		WHERE c.user_id = $1
+	`, userID).Scan(&total)
+
+	if err != nil {
+		return 0
+	}
+
+	return total
 }

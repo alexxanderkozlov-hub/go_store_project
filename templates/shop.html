@@ -14,35 +14,17 @@
         .container {
             max-width: 1200px;
             margin: auto;
+            position: relative;
         }
 
         h1 {
             margin-bottom: 20px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background: #f5f5f5;
-            cursor: pointer;
-        }
-
-        th:hover {
-            background: #eee;
-        }
-
-        .price {
-            color: green;
-            font-weight: bold;
+        /* ===== HEADER (кнопки сверху) ===== */
+        .top-header {
+            position: relative;
+            margin-bottom: 20px;
         }
 
         .btn {
@@ -56,20 +38,70 @@
             margin-right: 5px;
         }
 
-        .btn-buy {
-            background: #2ecc71;
-        }
-
         .btn-edit {
             background: #3498db;
         }
 
-        .btn-delete {
-            background: #e74c3c;
+        /* 🟡 КНОПКА КОРЗИНЫ */
+        .btn-cart {
+            background: #f1c40f;
+            color: #000;
+            font-weight: bold;
+
+            position: absolute;
+            right: 0;
+            top: 0;
+
+            padding: 12px 18px;
+            font-size: 16px;
+            border-radius: 10px;
+
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        .top {
-            margin-bottom: 15px;
+        .btn-cart:hover {
+            background: #f39c12;
+        }
+
+        /* ===== TABLE ===== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+            vertical-align: middle;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        th {
+            background: #f5f5f5;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        th:hover {
+            background: #eee;
+        }
+
+        .price {
+            color: green;
+            font-weight: bold;
+        }
+
+        .btn-buy {
+            background: #2ecc71;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
         }
     </style>
 </head>
@@ -79,8 +111,12 @@
 
     <h1>Товары</h1>
 
-    <div class="top">
+    <div class="top-header">
         <a href="/main" class="btn btn-edit">Назад</a>
+
+        <a href="/cart" class="btn btn-cart">
+            🛒 Корзина
+        </a>
     </div>
 
     <table id="table">
@@ -99,22 +135,18 @@
         {{range .products}}
         <tr>
             <td>{{.ID}}</td>
-            <td><b>{{.Name}}</b></td>
+            <td>{{.Name}}</td>
             <td class="price">{{printf "%.2f" .Price}}</td>
             <td>{{.Description}}</td>
             <td>{{.SKU}}</td>
 
             <td>
-
-                <!-- 👇 КНОПКА КЛИЕНТА -->
                 {{if eq $.role "customer"}}
-                    <button class="btn btn-buy"
-                            onclick="buyProduct('{{.ID}}', '{{.Name}}')">
+                    <a class="btn btn-buy" href="/cart/add/{{.ID}}">
                         Купить
-                    </button>
+                    </a>
                 {{end}}
 
-                <!-- 👇 КНОПКИ АДМИНА -->
                 {{if eq $.role "admin"}}
                     <a class="btn btn-edit" href="/products/{{.ID}}/edit">Редакт</a>
                     <a class="btn btn-delete"
@@ -123,7 +155,6 @@
                         Удалить
                     </a>
                 {{end}}
-
             </td>
         </tr>
         {{end}}
@@ -169,7 +200,6 @@ function sortTable(n) {
     }
 }
 
-// 👇 имитация покупки
 function buyProduct(id, name) {
     alert("Вы купили: " + name + " (ID: " + id + ")");
 }

@@ -55,6 +55,17 @@ type Supply struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+//  Корзина
+type CartItem struct {
+	ID        int
+	UserID    int
+	ProductID int
+	Name      string
+	Price     float64
+	Quantity  int
+	Total     float64
+}
+
 // GetStatusText преобразует системный статус поставки в читаемый текст на русском
 // Используется для отображения в пользовательском интерфейсе
 func GetStatusText(status string) string {

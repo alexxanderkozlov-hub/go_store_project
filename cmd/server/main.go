@@ -46,6 +46,10 @@ func setupRoutes(r *gin.Engine) {
 
 	// 👇 ДОБАВИЛИ (страница покупателя)
 	r.GET("/shop", handlers.ShopPage)
+	r.GET("/cart/add/:id", handlers.AddToCartHandler)
+	r.GET("/cart/delete/:id", handlers.RemoveFromCart)
+	r.GET("/cart/buy/:id", handlers.BuyFromCart)
+	r.GET("/cart", handlers.CartPage)
 
 	// Магазины
 	r.GET("/stores", handlers.StoreListPage)
