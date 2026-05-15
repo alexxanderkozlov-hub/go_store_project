@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Вход в систему</title>
+    <title>Регистрация в системе</title>
 
     <style>
         body {
@@ -16,7 +16,7 @@
             min-height: 100vh;
         }
 
-        .login-box {
+        .register-box {
             background: white;
             padding: 40px;
             border-radius: 8px;
@@ -61,7 +61,7 @@
             font-size: 14px;
         }
 
-        .btn-login {
+        .btn-register {
             background-color: #6c63ff;
             color: white;
             border: none;
@@ -73,15 +73,15 @@
             font-weight: normal;
         }
 
-        .btn-login:hover {
+        .btn-register:hover {
             background-color: #554fd8;
         }
 
-        .register-link {
+        .login-link {
             margin-top: 15px;
         }
 
-        .btn-register {
+        .btn-login {
             display: block;
             text-align: center;
             background-color: white;
@@ -94,15 +94,15 @@
             transition: 0.2s;
         }
 
-        .btn-register:hover {
+        .btn-login:hover {
             background-color: #f3f2ff;
         }
     </style>
 </head>
 
 <body>
-    <div class="login-box">
-        <h1>Вход в систему</h1>
+    <div class="register-box">
+        <h1>Регистрация</h1>
 
         {{if .error}}
         <div class="error">
@@ -110,13 +110,14 @@
         </div>
         {{end}}
 
-        <form method="POST" action="/login">
+        <!-- Форма отправляет POST запрос на /register для обработки на бэкенде -->
+        <form method="POST" action="/register">
             <div class="form-group">
                 <input 
                     type="text"
                     name="username"
                     class="form-input"
-                    placeholder="Логин"
+                    placeholder="Придумайте логин"
                     required
                 >
             </div>
@@ -126,19 +127,29 @@
                     type="password"
                     name="password"
                     class="form-input"
-                    placeholder="Пароль"
+                    placeholder="Придумайте пароль"
                     required
                 >
             </div>
 
-            <button type="submit" class="btn-login">
-                Войти
+            <div class="form-group">
+                <input 
+                    type="password"
+                    name="confirm_password"
+                    class="form-input"
+                    placeholder="Повторите пароль"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn-register">
+                Создать аккаунт
             </button>
         </form>
 
-        <div class="register-link">
-            <a href="/register" class="btn-register">
-                Зарегистрироваться
+        <div class="login-link">
+            <a href="/login" class="btn-login">
+                Уже есть аккаунт? Войти
             </a>
         </div>
     </div>
