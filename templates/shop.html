@@ -6,9 +6,10 @@
 
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             padding: 30px;
             background: #fff;
+            color: #333;
         }
 
         .container {
@@ -36,6 +37,7 @@
             color: white;
             display: inline-block;
             margin-right: 5px;
+            font-size: 14px;
         }
 
         .btn-edit {
@@ -61,6 +63,78 @@
 
         .btn-cart:hover {
             background: #f39c12;
+        }
+
+        /* ===== НОВЫЕ СТИЛИ ДЛЯ ФИЛЬТРОВ ===== */
+        .filters {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .filter-group label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .filter-group input, 
+        .filter-group select {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: #2ecc71;
+        }
+
+        .btn-primary:hover {
+            background: #27ae60;
+        }
+
+        .btn-gray {
+            background: #95a5a6;
+        }
+
+        .btn-gray:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-hover-lift {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         /* ===== TABLE ===== */
@@ -119,6 +193,45 @@
         </a>
     </div>
 
+    <!-- Фильтры (Перенесены наверх, добавлены name для отправки в Go) -->
+    <form method="GET" action="/shop" class="filters">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="search">Поиск товара:</label>
+                <input type="text" id="search" name="search_query" placeholder="Название, артикул или описание..." value="{{.search_query}}">
+            </div>
+            
+            <div class="filter-group">
+                <label for="sort">Сортировать по:</label>
+                <select id="sort" name="sort_by">
+                    <option value="">Без сортировки</option>
+                    <option value="id" {{if eq .sort_by "id"}}selected{{end}}>ID</option>
+                    <option value="name" {{if eq .sort_by "name"}}selected{{end}}>Названию</option>
+                    <option value="price" {{if eq .sort_by "price"}}selected{{end}}>Цене</option>
+                    <option value="sku" {{if eq .sort_by "sku"}}selected{{end}}>Артикулу</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="direction">Направление:</label>
+                <select id="direction" name="direction">
+                    <option value="asc" {{if eq .direction "asc"}}selected{{end}}>По возрастанию</option>
+                    <option value="desc" {{if eq .direction "desc"}}selected{{end}}>По убыванию</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="filter-buttons">
+            <button type="submit" class="btn btn-primary btn-hover-lift" id="applyBtn">
+                Применить фильтры
+            </button>
+            <a href="/shop" class="btn btn-gray btn-hover-lift" id="resetBtn">
+                Сбросить фильтры
+            </a>
+        </div>
+    </form>
+
+    <!-- ТАБЛИЦА -->
     <table id="table">
         <thead>
         <tr>
