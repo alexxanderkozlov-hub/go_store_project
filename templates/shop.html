@@ -173,6 +173,10 @@
         .btn-buy {
             background: #2ecc71;
         }
+        
+        .btn-buy:hover {
+            background: #27ae60;
+        }
 
         .btn-delete {
             background: #e74c3c;
@@ -193,7 +197,7 @@
         </a>
     </div>
 
-    <!-- Фильтры (Перенесены наверх, добавлены name для отправки в Go) -->
+    <!-- Фильтры -->
     <form method="GET" action="/shop" class="filters">
         <div class="filter-row">
             <div class="filter-group">
@@ -255,9 +259,10 @@
 
             <td>
                 {{if eq $.role "customer"}}
-                    <a class="btn btn-buy" href="/cart/add/{{.ID}}">
+                    <!-- ИЗМЕНЕНО: Теперь это кнопка, которая вызывает JS функцию без перезагрузки -->
+                    <button class="btn btn-buy" onclick="addToCart(event, '{{.ID}}', '{{.Name}}')">
                         Купить
-                    </a>
+                    </button>
                 {{end}}
 
                 {{if eq $.role "admin"}}
@@ -277,6 +282,7 @@
 </div>
 
 <script>
+// Функция сортировки таблицы (осталась без изменений)
 function sortTable(n) {
     let table = document.getElementById("table");
     let switching = true;
@@ -313,8 +319,27 @@ function sortTable(n) {
     }
 }
 
-function buyProduct(id, name) {
-    alert("Вы купили: " + name + " (ID: " + id + ")");
+// НОВАЯ ФУНКЦИЯ: Добавление в корзину без перезагрузки страницы
+function addToCart(event, productId, productName) {
+    // 1. Блокируем стандартное поведение (если вдруг кнопка находится в форме)
+    event.preventDefault(); 
+
+    // 2. Отправляем фоновый GET-запрос на твой роут добавления в корзину
+    fetch('/cart/add/' + productId, {
+        method: 'GET'
+    })
+    .then(response => {
+        // Если сервер ответил успешно (или сделал свой редирект внутри)
+        if (response.ok || response.redirected) {
+            alert("Товар '" + productName + "' успешно добавлен в корзину!");
+        } else {
+            alert("Не удалось добавить товар в корзину. Ошибка на сервере.");
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        alert("Произошла ошибка сети.");
+    });
 }
 </script>
 
