@@ -48,6 +48,10 @@ func setupRoutes(r *gin.Engine) {
 	r.POST("/login", handlers.LoginHandler)
 	r.GET("/logout", handlers.LogoutHandler)
 
+	// REGISTER
+	r.GET("/register", handlers.RegisterPage)
+	r.POST("/register", handlers.RegisterHandler)
+
 	// SHOP + CART
 	r.GET("/shop", handlers.ShopPage)
 	r.GET("/cart/add/:id", handlers.AddToCartHandler)

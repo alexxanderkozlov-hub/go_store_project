@@ -203,10 +203,23 @@ func (s *Storage) initTables() error {
 	if err == nil && count == 0 {
 		// Если таблица пуста, создаем пользователя по умолчанию
 		// ВНИМАНИЕ: Пароль хранится в открытом виде! В продакшене нужно хэшировать
-		_, err = s.db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)",
-			"admin", "admin123")
-		if err != nil {
-			log.Printf("Warning: failed to create default user: %v", err)
+		err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+
+		if err == nil && count == 0 {
+
+			_, err = s.db.Exec(`
+				INSERT INTO users (username, password, role)
+				VALUES 
+				($1, $2, $3),
+				($4, $5, $6)
+			`,
+				"admin", "admin123", "admin",
+				"user", "1234", "customer",
+			)
+
+			if err != nil {
+				log.Printf("Warning: failed to create default users: %v", err)
+			}
 		}
 	}
 
